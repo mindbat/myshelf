@@ -51,7 +51,8 @@
                                        params)]
     (xml/parse (input-stream
                 (.getBytes
-                 (:body (http/get {:query-params credentials})))))))
+                 (:body (http/get url
+                                  {:query-params credentials})))))))
 
 (defn get-user-id
   "Fetch the Goodreads user id for the user that has granted access"
