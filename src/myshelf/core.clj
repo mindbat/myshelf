@@ -69,3 +69,42 @@
         first
         :attrs
         :id)))
+
+(defn element->map
+  "Convert a clojure.data.xml Element into a hashmap"
+  [element]
+  {(:tag element)
+   (if (string? (first (:content element)))
+     (first (:content element))
+     (apply merge (map element->map (:content element))))})
+
+(defn extract-book-data
+  "Given a <book> in a <review>, pull out the book's info into
+  a more useful hashmap"
+  [review-element]
+  (->> review-element
+       :content
+       (filter #(= :book (:tag %)))
+       first
+       :content
+       (reduce (fn [book-map book-tag]
+                 (merge book-map (element->map book-tag)))
+               {})))
+
+(defn get-books-on-shelf
+  "Returns list of hashmaps representing the books on a given
+  user's bookshelf"
+  [consumer access-token user-id shelf]
+  (let [shelf-url (str "https://www.goodreads.com/review/list/"
+                       user-id)
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    shelf-url
+                                    {:shelf shelf
+                                     :format "xml"
+                                     :v 2})]
+    (->> resp
+         :content
+         second
+         :content
+         (map extract-book-data))))
