@@ -1,7 +1,7 @@
 (ns myshelf.core
   (:require [clj-http.client :as http]
+            [clojure.data.xml :as xml]
             [clojure.java.io :refer [input-stream]]
-            [clojure.xml :as xml]
             [oauth.client :as oauth]))
 
 (def goodreads-request-token-url
@@ -49,10 +49,11 @@
                                        :GET
                                        url
                                        params)]
-    (xml/parse (input-stream
-                (.getBytes
-                 (:body (http/get url
-                                  {:query-params credentials})))))))
+      (xml/parse-str
+       (:body
+        (http/get url
+                  {:query-params (merge credentials
+                                        params)})))))
 
 (defn get-user-id
   "Fetch the Goodreads user id for the user that has granted access"
