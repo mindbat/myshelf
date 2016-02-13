@@ -4,5 +4,6 @@
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/tools.nrepl "0.2.12"]
                  [clj-oauth "1.5.4"]]
   :plugins [[cider/cider-nrepl "0.10.1"]])
