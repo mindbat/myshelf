@@ -190,3 +190,33 @@
          :content
          (map element->map)
          (map (comp (juxt :title :id :author) :best_book :work)))))
+
+(defn add-book-review
+  [consumer access-token book-id rating & [review-text]]
+  (let [review-url "https://www.goodreads.com/review"
+        params (merge {:format "xml"
+                       :book_id book-id
+                       (keyword "review[rating") rating
+                       :shelf "read"}
+                      (when review-text
+                        {(keyword "review[review]") review-text}))]
+    (make-auth-request-POST consumer
+                            access-token
+                            review-url
+                            params)))
+
+(defn edit-book-review
+  [consumer access-token review-id new-rating & [review-text]]
+  (let [review-url (str "https://www.goodreads.com/review/"
+                        review-id
+                        ".xml")
+        params (merge {:id review-id
+                       (keyword "review[rating]") new-rating
+                       :finished true
+                       :shelf "read"}
+                      (when review-text
+                        {(keyword "review[review]") review-text}))]
+    (make-auth-request-PUT consumer
+                           access-token
+                           review-url
+                           params)))
