@@ -193,6 +193,22 @@
          (map element->map)
          (map (comp (juxt :title :id :author) :best_book :work)))))
 
+(defn find-book-on-shelves
+  "Try to find a book on a user's shelves, given book title"
+  [consumer access-token user-id title]
+  (let [shelf-url (str "https://www.goodreads.com/review/list/"
+                       user-id)
+        params {:format "xml" :v 2 (keyword "search[query]") title}
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    shelf-url
+                                    params)]
+    (->> resp
+         :content
+         second
+         :content
+         (map extract-book-data))))
+
 (defn add-book-review
   "Add a book review. Automatically adds book to read shelf."
   [consumer access-token book-id rating & [review-text]]
