@@ -133,15 +133,17 @@
 (defn get-books-on-shelf
   "Returns list of hashmaps representing the books on a given
   user's bookshelf"
-  [consumer access-token user-id shelf]
+  [consumer access-token user-id shelf & [query]]
   (let [shelf-url (str "https://www.goodreads.com/review/list/"
                        user-id)
+        params (merge {:shelf shelf :format "xml" :v 2}
+                      (when query
+                        {(keyword "search[query]")
+                         query}))
         resp (make-auth-request-GET consumer
                                     access-token
                                     shelf-url
-                                    {:shelf shelf
-                                     :format "xml"
-                                     :v 2})]
+                                    params)]
     (->> resp
          :content
          second
