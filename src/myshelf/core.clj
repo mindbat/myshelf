@@ -192,6 +192,7 @@
          (map (comp (juxt :title :id :author) :best_book :work)))))
 
 (defn add-book-review
+  "Add a book review. Automatically adds book to read shelf."
   [consumer access-token book-id rating & [review-text]]
   (let [review-url "https://www.goodreads.com/review"
         params (merge {:format "xml"
@@ -206,6 +207,8 @@
                             params)))
 
 (defn edit-book-review
+  "Edit a book review. Automatically sets book to finished
+  and adds it to the read shelf, if it wasn't already there."
   [consumer access-token review-id new-rating & [review-text]]
   (let [review-url (str "https://www.goodreads.com/review/"
                         review-id
