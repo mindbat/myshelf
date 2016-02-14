@@ -224,6 +224,16 @@
                             review-url
                             params)))
 
+(defn add-book-review-by-title
+  [consumer access-token user-id title rating & [review-text]]
+  (if-let [shelved-id (:id (first (find-book-on-shelves consumer
+                                                        access-token
+                                                        user-id
+                                                        title)))]
+    (add-book-review consumer access-token shelved-id rating
+                     review-text)
+    "Could not find book on shelves"))
+
 (defn edit-book-review
   "Edit a book review. Automatically sets book to finished
   and adds it to the read shelf, if it wasn't already there."
