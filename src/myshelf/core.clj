@@ -55,6 +55,45 @@
                   {:query-params (merge credentials
                                         params)})))))
 
+(defn make-auth-request-POST
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :POST
+                                       url
+                                       params)]
+      (http/post url
+                 {:query-params (merge credentials
+                                       params)})))
+
+(defn make-auth-request-PUT
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :PUT
+                                       url
+                                       params)]
+      (http/put url
+                {:query-params (merge credentials
+                                      params)})))
+
+(defn make-auth-request-DELETE
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :DELETE
+                                       url
+                                       params)]
+      (http/delete url
+                   {:query-params (merge credentials
+                                         params)})))
+
 (defn get-user-id
   "Fetch the Goodreads user id for the user that has granted access"
   [consumer access-token]
@@ -94,15 +133,17 @@
 (defn get-books-on-shelf
   "Returns list of hashmaps representing the books on a given
   user's bookshelf"
-  [consumer access-token user-id shelf]
+  [consumer access-token user-id shelf & [query]]
   (let [shelf-url (str "https://www.goodreads.com/review/list/"
                        user-id)
+        params (merge {:shelf shelf :format "xml" :v 2}
+                      (when query
+                        {(keyword "search[query]")
+                         query}))
         resp (make-auth-request-GET consumer
                                     access-token
                                     shelf-url
-                                    {:shelf shelf
-                                     :format "xml"
-                                     :v 2})]
+                                    params)]
     (->> resp
          :content
          second
@@ -151,3 +192,62 @@
          :content
          (map element->map)
          (map (comp (juxt :title :id :author) :best_book :work)))))
+
+(defn find-book-on-shelves
+  "Try to find a book on a user's shelves, given book title"
+  [consumer access-token user-id title]
+  (let [shelf-url (str "https://www.goodreads.com/review/list/"
+                       user-id)
+        params {:format "xml" :v 2 (keyword "search[query]") title}
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    shelf-url
+                                    params)]
+    (->> resp
+         :content
+         second
+         :content
+         (map extract-book-data))))
+
+(defn add-book-review
+  "Add a book review. Automatically adds book to read shelf."
+  [consumer access-token book-id rating & [review-text]]
+  (let [review-url "https://www.goodreads.com/review"
+        params (merge {:format "xml"
+                       :book_id book-id
+                       (keyword "review[rating") rating
+                       :shelf "read"}
+                      (when review-text
+                        {(keyword "review[review]") review-text}))]
+    (make-auth-request-POST consumer
+                            access-token
+                            review-url
+                            params)))
+
+(defn add-book-review-by-title
+  [consumer access-token user-id title rating & [review-text]]
+  (if-let [shelved-id (:id (first (find-book-on-shelves consumer
+                                                        access-token
+                                                        user-id
+                                                        title)))]
+    (add-book-review consumer access-token shelved-id rating
+                     review-text)
+    "Could not find book on shelves"))
+
+(defn edit-book-review
+  "Edit a book review. Automatically sets book to finished
+  and adds it to the read shelf, if it wasn't already there."
+  [consumer access-token review-id new-rating & [review-text]]
+  (let [review-url (str "https://www.goodreads.com/review/"
+                        review-id
+                        ".xml")
+        params (merge {:id review-id
+                       (keyword "review[rating]") new-rating
+                       :finished true
+                       :shelf "read"}
+                      (when review-text
+                        {(keyword "review[review]") review-text}))]
+    (make-auth-request-PUT consumer
+                           access-token
+                           review-url
+                           params)))
