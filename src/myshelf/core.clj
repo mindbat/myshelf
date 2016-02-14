@@ -55,6 +55,45 @@
                   {:query-params (merge credentials
                                         params)})))))
 
+(defn make-auth-request-POST
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :POST
+                                       url
+                                       params)]
+      (http/post url
+                 {:query-params (merge credentials
+                                       params)})))
+
+(defn make-auth-request-PUT
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :PUT
+                                       url
+                                       params)]
+      (http/put url
+                {:query-params (merge credentials
+                                      params)})))
+
+(defn make-auth-request-DELETE
+  [consumer access-token url params]
+    (let [{:keys [oauth_token oauth_token_secret]} access-token
+        credentials (oauth/credentials consumer
+                                       oauth_token
+                                       oauth_token_secret
+                                       :DELETE
+                                       url
+                                       params)]
+      (http/delete url
+                   {:query-params (merge credentials
+                                         params)})))
+
 (defn get-user-id
   "Fetch the Goodreads user id for the user that has granted access"
   [consumer access-token]
