@@ -63,10 +63,12 @@
                                        oauth_token_secret
                                        :POST
                                        url
-                                       params)]
-      (http/post url
-                 {:query-params (merge credentials
-                                       params)})))
+                                       params)
+          resp (http/post url
+                          {:query-params (merge credentials
+                                                params)})]
+      (when (= 201 (:status resp))
+        (xml/parse-str (:body resp)))))
 
 (defn make-auth-request-PUT
   [consumer access-token url params]
@@ -251,3 +253,13 @@
                            access-token
                            review-url
                            params)))
+
+(defn add-book-to-shelf
+  [consumer access-token book-id shelf]
+  (let [add-url "https://www.goodreads.com/shelf/add_to_shelf.xml"
+        params {:name shelf
+                :book_id book-id}]
+    (make-auth-request-POST consumer
+                            access-token
+                            add-url
+                            params)))
