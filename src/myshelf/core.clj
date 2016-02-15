@@ -302,4 +302,14 @@
          :content
          second
          :content
-         (map element->map))))
+         (map element->map)
+         (map :user))))
+
+(defn get-friend-ratings-for-book
+  [consumer access-token user-id book-id]
+  (let [friends (get-user-friends consumer access-token
+                                  user-id)]
+    (->> friends
+         (map #(get-book-rating consumer access-token
+                                (:id %) book-id))
+         (filter identity))))
