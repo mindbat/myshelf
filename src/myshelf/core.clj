@@ -263,3 +263,17 @@
                             access-token
                             add-url
                             params)))
+
+(defn get-user-friends
+  [consumer access-token user-id]
+  (let [friends-url "https://www.goodreads.com/friend/user.xml"
+        params {:id user-id}
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    friends-url
+                                    params)]
+    (->> resp
+         :content
+         second
+         :content
+         (map element->map))))
