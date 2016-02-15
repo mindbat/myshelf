@@ -253,3 +253,13 @@
                            access-token
                            review-url
                            params)))
+
+(defn add-book-to-shelf
+  [consumer access-token book-id shelf]
+  (let [add-url "https://www.goodreads.com/shelf/add_to_shelf.xml"
+        params {:name shelf
+                :book_id book-id}]
+    (make-auth-request-POST consumer
+                            access-token
+                            add-url
+                            params)))
