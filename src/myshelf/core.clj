@@ -211,6 +211,32 @@
          :content
          (map extract-book-data))))
 
+(defn get-book-review
+  [consumer access-token user-id book-id]
+  (let [review-url (str "https://www.goodreads.com/"
+                        "review/show_by_user_and_book.xml")
+        params {:user_id user-id
+                :book_id book-id}
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    review-url
+                                    params)]
+    (-> resp
+        :content
+        second
+        :content)))
+
+(defn get-book-rating
+  "Get a user's rating for a given book"
+  [consumer access-token user-id book-id]
+  (try (->> (get-book-review consumer access-token user-id book-id)
+            (filter #(= :rating (:tag %)))
+            first
+            :content
+            first)
+       (catch Exception ex
+         nil)))
+
 (defn add-book-review
   "Add a book review. Automatically adds book to read shelf."
   [consumer access-token book-id rating & [review-text]]
