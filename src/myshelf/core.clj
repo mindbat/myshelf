@@ -63,10 +63,12 @@
                                        oauth_token_secret
                                        :POST
                                        url
-                                       params)]
-      (http/post url
-                 {:query-params (merge credentials
-                                       params)})))
+                                       params)
+          resp (http/post url
+                          {:query-params (merge credentials
+                                                params)})]
+      (when (= 201 (:status resp))
+        (xml/parse-str (:body resp)))))
 
 (defn make-auth-request-PUT
   [consumer access-token url params]
