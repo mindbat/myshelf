@@ -311,5 +311,58 @@
                                   user-id)]
     (->> friends
          (map #(get-book-rating consumer access-token
-                                (:id %) book-id))
-         (filter identity))))
+                                (:id %) book-id)))))
+
+(defn compute-book-score
+  [book-info friend-ratings]
+  (let [avg-rating (Float/parseFloat (:average_rating book-info))
+        pub-date (Integer/parseInt (:publication_year book-info))
+        pub-distance (/ 1 (- 2017 pub-date))
+        num-ratings (Integer/parseInt (:ratings_count book-info))
+        num-text-ratings (Integer/parseInt (:text_reviews_count
+                                            book-info))
+        text-to-num-ratio (/ num-text-ratings num-ratings)
+        filtered-ratings (->> friend-ratings
+                              (filter identity)
+                              (map #(Integer/parseInt %))
+                              (filter #(> % 0)))
+        num-friend-ratings (count filtered-ratings)]
+    (if (> num-friend-ratings 0)
+      (* avg-rating
+         pub-distance
+         text-to-num-ratio
+         (/ (apply + filtered-ratings)
+            num-friend-ratings))
+      (* avg-rating pub-distance text-to-num-ratio))))
+
+(defn find-book-and-score
+  [consumer access-token user-id title]
+  (let [book (first (find-book-on-shelves consumer
+                                          access-token
+                                          user-id
+                                          title))
+        friend-ratings (get-friend-ratings-for-book consumer
+                                                    access-token
+                                                    user-id
+                                                    (:id book))]
+    (compute-book-score book friend-ratings)))
+
+(defn score-books-on-shelf
+  [consumer access-token user-id shelf]
+  (let [books (get-books-on-shelf consumer access-token
+                                   user-id shelf)]
+    (for [book books]
+      (let [ratings (get-friend-ratings-for-book consumer
+                                                 access-token
+                                                 user-id
+                                                 (:id book))]
+        (merge book
+               {:score (compute-book-score book ratings)})))))
+
+(defn rank-books-on-shelf
+  [consumer access-token user-id shelf]
+  (let [scored-books (score-books-on-shelf consumer access-token
+                                           user-id shelf)]
+    (->> scored-books
+         (sort-by :score >)
+         (map (juxt :id :title (comp :name :author :authors))))))
