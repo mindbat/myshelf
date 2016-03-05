@@ -317,7 +317,7 @@
   [book-info friend-ratings]
   (let [avg-rating (Float/parseFloat (:average_rating book-info))
         pub-date (Integer/parseInt (:publication_year book-info))
-        pub-distance (/ 1 (- 2017 pub-date))
+        pub-distance (/ (- pub-date 1970.0) (- 2016.0 1970.0))
         num-ratings (Integer/parseInt (:ratings_count book-info))
         num-text-ratings (Integer/parseInt (:text_reviews_count
                                             book-info))
@@ -328,12 +328,12 @@
                               (filter #(> % 0)))
         num-friend-ratings (count filtered-ratings)]
     (if (> num-friend-ratings 0)
-      (* avg-rating
+      (* (/ avg-rating 5.0)
          pub-distance
          text-to-num-ratio
          (/ (apply + filtered-ratings)
             num-friend-ratings))
-      (* avg-rating pub-distance text-to-num-ratio))))
+      (* (/ avg-rating 5.0) pub-distance text-to-num-ratio))))
 
 (defn find-book-and-score
   [consumer access-token user-id title]
