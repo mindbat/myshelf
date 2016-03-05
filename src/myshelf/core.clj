@@ -156,6 +156,21 @@
          :content
          (map extract-book-data))))
 
+(defn get-all-books-on-shelf
+  "Fetches all the books on a shelf. Note that this might be
+  hundreds or thousands of books!"
+  [consumer access-token user-id shelf]
+  (let [per-page 200]
+    (loop [page 1
+           books []]
+      (let [new-books (get-books-on-shelf consumer access-token
+                                          user-id shelf
+                                          :page page
+                                          :per-page per-page)]
+        (if (empty? new-books)
+          books
+          (recur (inc page) (apply conj books new-books)))))))
+
 (defn find-book-by-title
   "Runs a query for a book by title. Returns only the last
   20 results."
