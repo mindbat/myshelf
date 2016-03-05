@@ -324,33 +324,46 @@
          (map element->map)
          (map :user))))
 
+(defn try-int
+  [val]
+  (try
+    (Integer/parseInt val)
+    (catch Exception ex
+      0)))
+
 (defn get-friend-ratings-for-book
-  [consumer access-token user-id book-id]
-  (let [friends (get-user-friends consumer access-token
-                                  user-id)]
+  [consumer access-token book-id & {:keys [friends user-id]}]
+  (let [friends (or friends
+                    (get-user-friends consumer access-token
+                                      user-id))]
     (->> friends
-         (map #(get-book-rating consumer access-token
-                                (:id %) book-id)))))
+         (pmap #(get-book-rating consumer access-token
+                                 (:id %) book-id))
+         (filter identity)
+         (map try-int)
+         (filter #(> % 0)))))
+
+(def score-keys [:average_rating :publication_year
+                 :ratings_count :text_reviews_count
+                 :id :title :authors])
 
 (defn compute-book-score
   [book-info friend-ratings]
   (let [avg-rating (Float/parseFloat (:average_rating book-info))
-        pub-date (Integer/parseInt (:publication_year book-info))
+        pub-date (try-int (:publication_year book-info))
         pub-distance (/ (- pub-date 1970.0) (- 2016.0 1970.0))
         num-ratings (Integer/parseInt (:ratings_count book-info))
         num-text-ratings (Integer/parseInt (:text_reviews_count
                                             book-info))
-        text-to-num-ratio (/ num-text-ratings num-ratings)
-        filtered-ratings (->> friend-ratings
-                              (filter identity)
-                              (map #(Integer/parseInt %))
-                              (filter #(> % 0)))
-        num-friend-ratings (count filtered-ratings)]
+        text-to-num-ratio (try (/ num-text-ratings num-ratings)
+                               (catch Exception ex
+                                 1))
+        num-friend-ratings (count friend-ratings)]
     (if (> num-friend-ratings 0)
       (* (/ avg-rating 5.0)
          pub-distance
          text-to-num-ratio
-         (/ (apply + filtered-ratings)
+         (/ (apply + friend-ratings)
             num-friend-ratings))
       (* (/ avg-rating 5.0) pub-distance text-to-num-ratio))))
 
@@ -366,17 +379,23 @@
                                                     (:id book))]
     (compute-book-score book friend-ratings)))
 
+(defn score-books
+  [consumer access-token books friends]
+  (for [book (map #(select-keys % score-keys) books)]
+    (let [ratings (get-friend-ratings-for-book consumer
+                                               access-token
+                                               (:id book)
+                                               :friends friends)]
+      (merge book
+             {:score (compute-book-score book ratings)}))))
+
 (defn score-books-on-shelf
   [consumer access-token user-id shelf]
-  (let [books (get-books-on-shelf consumer access-token
-                                   user-id shelf)]
-    (for [book books]
-      (let [ratings (get-friend-ratings-for-book consumer
-                                                 access-token
-                                                 user-id
-                                                 (:id book))]
-        (merge book
-               {:score (compute-book-score book ratings)})))))
+  (let [books (get-all-books-on-shelf consumer access-token
+                                      user-id shelf)
+        books (map #(select-keys % score-keys) books)
+        friends (get-user-friends consumer access-token user-id)]
+    (score-books consumer access-token books friends)))
 
 (defn rank-books-on-shelf
   [consumer access-token user-id shelf]
@@ -385,3 +404,9 @@
     (->> scored-books
          (sort-by :score >)
          (map (juxt :id :title (comp :name :author :authors))))))
+
+(defn rank-books
+  [consumer access-token books friends]
+  (->> (score-books consumer access-token books friends)
+       (sort-by :score >)
+       (map (juxt :id :title (comp :name :author :authors)))))
