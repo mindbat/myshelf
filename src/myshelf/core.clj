@@ -6,21 +6,6 @@
             [myshelf.common :refer [build-url
                                     element->map]]))
 
-(defn get-user-id
-  "Fetch the Goodreads user id for the user that has granted access"
-  [consumer access-token]
-  (let [user-id-url (build-url "api" "auth_user")
-        resp (make-auth-request-GET consumer
-                                    access-token
-                                    user-id-url
-                                    {})]
-    (->> resp
-        :content
-        (filter #(= :user (:tag %)))
-        first
-        :attrs
-        :id)))
-
 (defn find-book-by-title
   "Runs a query for a book by title. Returns only the last
   20 results."

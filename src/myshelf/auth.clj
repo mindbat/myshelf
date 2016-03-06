@@ -1,6 +1,7 @@
 (ns myshelf.auth
   (:require [clj-http.client :as http]
             [clojure.data.xml :as xml]
+            [myshelf.common :refer [build-url]]
             [oauth.client :as oauth]))
 
 (def goodreads-request-token-url
@@ -92,3 +93,18 @@
       (http/delete url
                    {:query-params (merge credentials
                                          params)})))
+
+(defn get-user-id
+  "Fetch the Goodreads user id for the user that has granted access"
+  [consumer access-token]
+  (let [user-id-url (build-url "api" "auth_user")
+        resp (make-auth-request-GET consumer
+                                    access-token
+                                    user-id-url
+                                    {})]
+    (->> resp
+        :content
+        (filter #(= :user (:tag %)))
+        first
+        :attrs
+        :id)))
