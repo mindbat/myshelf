@@ -1,5 +1,6 @@
 (ns myshelf.core
   (:require [clj-http.client :as http]
+            [clj-time.core :as t]
             [clojure.data.xml :as xml]
             [clojure.java.io :refer [input-stream]]
             [oauth.client :as oauth]))
@@ -351,7 +352,8 @@
   [book-info friend-ratings]
   (let [avg-rating (Float/parseFloat (:average_rating book-info))
         pub-date (try-int (:publication_year book-info))
-        pub-distance (/ (- pub-date 1970.0) (- 2016.0 1970.0))
+        current-year (t/year (t/now))
+        pub-distance (/ (- pub-date 1970.0) (- current-year 1970.0))
         num-ratings (Integer/parseInt (:ratings_count book-info))
         num-text-ratings (Integer/parseInt (:text_reviews_count
                                             book-info))

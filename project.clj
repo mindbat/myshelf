@@ -6,5 +6,6 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.xml "0.0.8"]
                  [org.clojure/tools.nrepl "0.2.12"]
-                 [clj-oauth "1.5.4"]]
+                 [clj-oauth "1.5.4"]
+                 [clj-time "0.11.0"]]
   :plugins [[cider/cider-nrepl "0.10.1"]])
