@@ -1,53 +1,9 @@
 (ns myshelf.core
-  (:require [clojure.string :as str]
-            [myshelf.auth :refer [make-auth-request-GET
-                                  make-auth-request-POST
-                                  make-auth-request-PUT]]
-            [myshelf.common :refer [build-url
-                                    element->map]]))
-
-(defn find-book-by-title
-  "Runs a query for a book by title. Returns only the last
-  20 results."
-  [consumer access-token title]
-  (let [search-url (build-url "search" "index")
-        params {:q title
-                :format "xml"
-                :field "title"}
-        resp (make-auth-request-GET consumer
-                                    access-token
-                                    search-url
-                                    params)]
-    (->> resp
-         :content
-         second
-         :content
-         (filter #(= :results (:tag %)))
-         first
-         :content
-         (map element->map)
-         (map (comp (juxt :title :id :author) :best_book :work)))))
-
-(defn find-book-by-title-and-author
-  "Runs a query for a book by title and author.
-  Returns only the last 20 results."
-  [consumer access-token title author]
-  (let [search-url (build-url "search" "index")
-        params {:q (str title " " author)
-                :format "xml"}
-        resp (make-auth-request-GET consumer
-                                    access-token
-                                    search-url
-                                    params)]
-    (->> resp
-         :content
-         second
-         :content
-         (filter #(= :results (:tag %)))
-         first
-         :content
-         (map element->map)
-         (map (comp (juxt :title :id :author) :best_book :work)))))
+  (:require [myshelf.friends :refer [get-user-friends]]
+            [myshelf.rank :refer [rank-books]]
+            [myshelf.reviews :refer [add-book-review]]
+            [myshelf.shelves :refer [find-book-on-shelves
+                                     get-all-books-on-shelf]]))
 
 (defn add-book-review-by-title
   [consumer access-token user-id title rating & [review-text]]
@@ -59,30 +15,9 @@
                      review-text)
     "Could not find book on shelves"))
 
-(defn find-book-and-score
-  [consumer access-token user-id title]
-  (let [book (first (find-book-on-shelves consumer
-                                          access-token
-                                          user-id
-                                          title))
-        friend-ratings (get-friend-ratings-for-book consumer
-                                                    access-token
-                                                    user-id
-                                                    (:id book))]
-    (compute-book-score book friend-ratings)))
-
-(defn score-books-on-shelf
+(defn rank-books-on-shelf
   [consumer access-token user-id shelf]
   (let [books (get-all-books-on-shelf consumer access-token
                                       user-id shelf)
-        books (map #(select-keys % score-keys) books)
         friends (get-user-friends consumer access-token user-id)]
-    (score-books consumer access-token books friends)))
-
-(defn rank-books-on-shelf
-  [consumer access-token user-id shelf]
-  (let [scored-books (score-books-on-shelf consumer access-token
-                                           user-id shelf)]
-    (->> scored-books
-         (sort-by :score >)
-         (map (juxt :id :title (comp :name :author :authors))))))
+    (rank-books consumer access-token books friends)))
