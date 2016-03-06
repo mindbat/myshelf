@@ -1,106 +1,21 @@
 (ns myshelf.core
-  (:require [clj-http.client :as http]
-            [clj-time.core :as t]
-            [clojure.data.xml :as xml]
-            [clojure.java.io :refer [input-stream]]
-            [oauth.client :as oauth]))
+  (:require [clj-time.core :as t]
+            [clojure.string :as str]
+            [myshelf.auth :refer [make-auth-request-GET
+                                  make-auth-request-POST
+                                  make-auth-request-PUT]]))
 
-(def goodreads-request-token-url
-  "http://www.goodreads.com/oauth/request_token")
-(def goodreads-authorize-url
-  "http://www.goodreads.com/oauth/authorize")
-(def goodreads-access-token-url
-  "http://www.goodreads.com/oauth/access_token")
-(def goodreads-base-url "http://goodreads.com/")
+(def goodreads-base-url "https://www.goodreads.com")
 (def goodreads-crypto-default :hmac-sha1)
 
-(defn get-consumer
-  "Get an API consumer for Goodreads"
-  [key secret]
-  (oauth/make-consumer key
-                       secret
-                       goodreads-request-token-url
-                       goodreads-access-token-url
-                       goodreads-authorize-url
-                       :hmac-sha1))
-
-(defn get-request-token
-  "Get a Goodreads request token for a particular application"
-  [consumer]
-  (oauth/request-token consumer))
-
-(defn find-approval-uri
-  "Fetch the uri to be opened in a browser for the user to grant approval
-  to this application"
-  [consumer request-token]
-  (oauth/user-approval-uri consumer
-                           (:oauth_token request-token)))
-
-(defn get-access-token
-  "Once access has been granted, fetch an access token for using the API"
-  [consumer request-token]
-  (oauth/access-token consumer request-token))
-
-(defn make-auth-request-GET
-  [consumer access-token url params]
-    (let [{:keys [oauth_token oauth_token_secret]} access-token
-        credentials (oauth/credentials consumer
-                                       oauth_token
-                                       oauth_token_secret
-                                       :GET
-                                       url
-                                       params)]
-      (xml/parse-str
-       (:body
-        (http/get url
-                  {:query-params (merge credentials
-                                        params)})))))
-
-(defn make-auth-request-POST
-  [consumer access-token url params]
-    (let [{:keys [oauth_token oauth_token_secret]} access-token
-        credentials (oauth/credentials consumer
-                                       oauth_token
-                                       oauth_token_secret
-                                       :POST
-                                       url
-                                       params)
-          resp (http/post url
-                          {:query-params (merge credentials
-                                                params)})]
-      (when (= 201 (:status resp))
-        (xml/parse-str (:body resp)))))
-
-(defn make-auth-request-PUT
-  [consumer access-token url params]
-    (let [{:keys [oauth_token oauth_token_secret]} access-token
-        credentials (oauth/credentials consumer
-                                       oauth_token
-                                       oauth_token_secret
-                                       :PUT
-                                       url
-                                       params)]
-      (http/put url
-                {:query-params (merge credentials
-                                      params)})))
-
-(defn make-auth-request-DELETE
-  [consumer access-token url params]
-    (let [{:keys [oauth_token oauth_token_secret]} access-token
-        credentials (oauth/credentials consumer
-                                       oauth_token
-                                       oauth_token_secret
-                                       :DELETE
-                                       url
-                                       params)]
-      (http/delete url
-                   {:query-params (merge credentials
-                                         params)})))
+(defn build-url
+  [& parts]
+  (str/join "/" (apply conj [goodreads-base-url] parts)))
 
 (defn get-user-id
   "Fetch the Goodreads user id for the user that has granted access"
   [consumer access-token]
-  (let [user-id-url "https://www.goodreads.com/api/auth_user"
+  (let [user-id-url (build-url "api" "auth_user")
         resp (make-auth-request-GET consumer
                                     access-token
                                     user-id-url
@@ -137,8 +52,7 @@
   "Returns list of hashmaps representing the books on a given
   user's bookshelf"
   [consumer access-token user-id shelf & {:keys [query page per-page]}]
-  (let [shelf-url (str "https://www.goodreads.com/review/list/"
-                       user-id)
+  (let [shelf-url (build-url "review" "list" user-id)
         params (merge {:shelf shelf :format "xml" :v 2}
                       (when query
                         {(keyword "search[query]")
@@ -176,7 +90,7 @@
   "Runs a query for a book by title. Returns only the last
   20 results."
   [consumer access-token title]
-  (let [search-url "https://www.goodreads.com/search/index"
+  (let [search-url (build-url "search" "index")
         params {:q title
                 :format "xml"
                 :field "title"}
@@ -198,7 +112,7 @@
   "Runs a query for a book by title and author.
   Returns only the last 20 results."
   [consumer access-token title author]
-  (let [search-url "https://www.goodreads.com/search/index"
+  (let [search-url (build-url "search" "index")
         params {:q (str title " " author)
                 :format "xml"}
         resp (make-auth-request-GET consumer
@@ -218,8 +132,7 @@
 (defn find-book-on-shelves
   "Try to find a book on a user's shelves, given book title"
   [consumer access-token user-id title]
-  (let [shelf-url (str "https://www.goodreads.com/review/list/"
-                       user-id)
+  (let [shelf-url (build-url "review" "list" user-id)
         params {:format "xml" :v 2 (keyword "search[query]") title}
         resp (make-auth-request-GET consumer
                                     access-token
@@ -233,8 +146,8 @@
 
 (defn get-book-review
   [consumer access-token user-id book-id]
-  (let [review-url (str "https://www.goodreads.com/"
-                        "review/show_by_user_and_book.xml")
+  (let [review-url (build-url "review"
+                              "show_by_user_and_book.xml")
         params {:user_id user-id
                 :book_id book-id}
         resp (make-auth-request-GET consumer
@@ -260,7 +173,7 @@
 (defn add-book-review
   "Add a book review. Automatically adds book to read shelf."
   [consumer access-token book-id rating & [review-text]]
-  (let [review-url "https://www.goodreads.com/review"
+  (let [review-url (build-url "review")
         params (merge {:format "xml"
                        :book_id book-id
                        (keyword "review[rating") rating
@@ -286,9 +199,7 @@
   "Edit a book review. Automatically sets book to finished
   and adds it to the read shelf, if it wasn't already there."
   [consumer access-token review-id new-rating & [review-text]]
-  (let [review-url (str "https://www.goodreads.com/review/"
-                        review-id
-                        ".xml")
+  (let [review-url (build-url "review" (str review-id ".xml"))
         params (merge {:id review-id
                        (keyword "review[rating]") new-rating
                        :finished true
@@ -302,7 +213,7 @@
 
 (defn add-book-to-shelf
   [consumer access-token book-id shelf]
-  (let [add-url "https://www.goodreads.com/shelf/add_to_shelf.xml"
+  (let [add-url (build-url "shelf" "add_to_shelf.xml")
         params {:name shelf
                 :book_id book-id}]
     (make-auth-request-POST consumer
@@ -312,7 +223,7 @@
 
 (defn get-user-friends
   [consumer access-token user-id]
-  (let [friends-url "https://www.goodreads.com/friend/user.xml"
+  (let [friends-url (build-url "friend" "user.xml")
         params {:id user-id}
         resp (make-auth-request-GET consumer
                                     access-token
