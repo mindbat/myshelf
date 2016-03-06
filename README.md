@@ -7,7 +7,7 @@ You'll need to sign up for the Goodreads API. This will give you a key and secre
 
 With those in hand, build a consumer for the API:
 
-     (require '[myshelf.core :as myshelf])
+     (require '[myshelf.auth :as myshelf])
 
      (def good-consumer (myshelf/get-consumer KEY SECRET))
 
