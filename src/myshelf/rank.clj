@@ -62,4 +62,5 @@
   [consumer access-token books friends]
   (->> (score-books consumer access-token books friends)
        (sort-by :score >)
-       (map (juxt :id :title (comp :name :author :authors)))))
+       (map (juxt :id :title (comp :name :author :authors)))
+       (map (partial zipmap [:id :title :author]))))

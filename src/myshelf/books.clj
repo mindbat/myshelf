@@ -23,7 +23,9 @@
          first
          :content
          (map element->map)
-         (map (comp (juxt :title :id :author) :best_book :work)))))
+         (map (comp (juxt :id :title (comp :name :author))
+                    :best_book :work))
+         (map (partial zipmap [:id :title :author])))))
 
 (defn find-book-by-title-and-author
   "Runs a query for a book by title and author.
@@ -44,4 +46,6 @@
          first
          :content
          (map element->map)
-         (map (comp (juxt :title :id :author) :best_book :work)))))
+         (map (comp (juxt :id :title (comp :name :author))
+                    :best_book :work))
+         (map (partial zipmap [:id :title :author])))))
