@@ -53,6 +53,15 @@
                (rank-books-on-shelf consumer access-token
                                     user-id "to-read"))))
 
+(defn export-shelf
+  [consumer access-token user-id shelf]
+  (let [books (get-all-books-on-shelf consumer access-token
+                                      user-id shelf)]
+    (->> books
+         (map #(assoc % :author (get-in % [:authors :author :name])))
+         (table [:title :author])
+         (spit (str "goodreads-export-" shelf ".table")))))
+
 (defn handle-socket-command
   [consumer access-token user-id ins outs]
   (binding [*in* (reader ins)
@@ -67,7 +76,11 @@
                   (= "add" cmd) (add-book-to-shelf consumer access-token
                                                    args "to-read")
                   (= "rank" cmd) (rank-to-read-books consumer access-token
-                                                     user-id))]
+                                                     user-id)
+                  (= "export" cmd) (export-shelf consumer
+                                                 access-token
+                                                 user-id
+                                                 args))]
         (println ret))
       (catch Exception ex
         (println "oh noes!" (.getMessage ex))))))
