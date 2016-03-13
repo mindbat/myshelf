@@ -5,7 +5,7 @@ Set of functions for accessing goodreads via clojure
 
 In your project.clj, add myshelf as a dependency:
 
-   [myshelf "0.2.1"]
+     [myshelf "0.2.1"]
 
 ## Getting Started
 
