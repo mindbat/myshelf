@@ -49,7 +49,9 @@
 (defn rank-to-read-books
   [consumer access-token user-id]
   (table [:id :title :author]
-         (take 10 (rank-books-on-shelf consumer access-token user-id "to-read"))))
+         (take 10
+               (rank-books-on-shelf consumer access-token
+                                    user-id "to-read"))))
 
 (defn handle-socket-command
   [consumer access-token user-id ins outs]
@@ -57,24 +59,21 @@
             *out* (writer outs)]
     (try
       (let [incoming (read-line)
-            [cmd args] (clojure.string/split incoming #"\|")]
-        (println "received: " incoming)
-        (let [ret (cond
-                    (= "find" cmd) (find-book consumer
-                                              access-token
-                                              args)
-                    (= "add" cmd) (add-book-to-shelf consumer access-token
-                                                     args "to-read")
-                    (= "rank" cmd) (rank-to-read-books consumer access-token
-                                                       user-id))]
-          (println ret)))
+            [cmd args] (clojure.string/split incoming #"\|")
+            ret (cond
+                  (= "find" cmd) (find-book consumer
+                                            access-token
+                                            args)
+                  (= "add" cmd) (add-book-to-shelf consumer access-token
+                                                   args "to-read")
+                  (= "rank" cmd) (rank-to-read-books consumer access-token
+                                                     user-id))]
+        (println ret))
       (catch Exception ex
         (println "oh noes!" (.getMessage ex))))))
 
 (defn -main
   [& [key secret]]
-  (println "in main")
-  (println "received key and secret:" key secret)
   (let [consumer (get-consumer key secret)
         request-token (get-request-token consumer)
         approval-uri (find-approval-uri consumer request-token)]
