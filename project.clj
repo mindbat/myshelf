@@ -1,5 +1,5 @@
-(defproject myshelf "0.1.0-SNAPSHOT"
-  :description "Grab-bag of functions for accessing goodreads data from clojure"
+(defproject myshelf "0.2.1"
+  :description "Set of functions for accessing goodreads data from clojure"
   :url "http://github.com/mindbat/myshelf"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
@@ -12,4 +12,4 @@
                  [robert/bruce "0.8.0"]
                  [server-socket "1.0.0"]]
   :plugins [[cider/cider-nrepl "0.10.1"]]
-  :main myshelf.core)
+  :jar-exclusions [#".*core.clj$"])

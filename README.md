@@ -1,5 +1,11 @@
 # myshelf
-Grab-bag of functions for accessing goodreads via clojure
+Set of functions for accessing goodreads via clojure
+
+## Installation
+
+In your project.clj, add myshelf as a dependency:
+
+   [myshelf "0.2.1"]
 
 ## Getting Started
 
@@ -23,3 +29,7 @@ After loading the url in your browser, you can get an access token, which you'll
 Now fetch your user id to make sure everything's working:
 
     (def user-id (myshelf/get-user-id good-consumer access-token))
+
+## Examples
+
+See myshelf.core and the scripts in the bin/ directory for an example cli application built using myshelf.
