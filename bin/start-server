@@ -1,0 +1,3 @@
+#!/bin/bash
+
+lein trampoline run $GOODREADS_KEY $GOODREADS_SECRET &
