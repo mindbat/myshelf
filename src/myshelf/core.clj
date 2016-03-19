@@ -9,7 +9,9 @@
             [myshelf.books :refer [find-book-by-title]]
             [myshelf.friends :refer [get-user-friends]]
             [myshelf.rank :refer [rank-books]]
-            [myshelf.reviews :refer [add-book-review]]
+            [myshelf.reviews :refer [add-book-review
+                                     get-book-review
+                                     edit-book-review]]
             [myshelf.shelves :refer [add-book-to-shelf
                                      find-book-on-shelves
                                      get-all-books-on-shelf]]
@@ -17,14 +19,28 @@
             [server.socket :as s])
   (:gen-class))
 
+(defn check-response
+  [resp]
+  (if (string? resp)
+    resp
+    (when (= 200 (:status resp))
+      "Success!")))
+
 (defn add-book-review-by-title
   [consumer access-token user-id title rating & [review-text]]
   (if-let [shelved-id (:id (first (find-book-on-shelves consumer
                                                         access-token
                                                         user-id
                                                         title)))]
-    (add-book-review consumer access-token shelved-id rating
-                     review-text)
+    (if-let [review-id (first
+                        (:content
+                         (first
+                          (get-book-review consumer access-token
+                                           user-id shelved-id))))]
+      (edit-book-review consumer access-token review-id rating
+                        review-text)
+      (add-book-review consumer access-token shelved-id rating
+                       review-text))
     "Could not find book on shelves"))
 
 (defn rank-books-on-shelf
@@ -68,19 +84,27 @@
             *out* (writer outs)]
     (try
       (let [incoming (read-line)
-            [cmd args] (clojure.string/split incoming #"\|")
+            [cmd arg-1 arg-2] (clojure.string/split incoming #"\|")
             ret (cond
                   (= "find" cmd) (find-book consumer
                                             access-token
-                                            args)
-                  (= "add" cmd) (add-book-to-shelf consumer access-token
-                                                   args "to-read")
+                                            arg-1)
+                  (= "add" cmd) (check-response
+                                 (add-book-to-shelf consumer access-token
+                                                    arg-1 "to-read"))
                   (= "rank" cmd) (rank-to-read-books consumer access-token
                                                      user-id)
                   (= "export" cmd) (export-shelf consumer
                                                  access-token
                                                  user-id
-                                                 args))]
+                                                 arg-1)
+                  (= "review" cmd) (check-response
+                                    (add-book-review-by-title
+                                     consumer
+                                     access-token
+                                     user-id
+                                     arg-1
+                                     arg-2)))]
         (println ret))
       (catch Exception ex
         (println "oh noes!" (.getMessage ex))))))
