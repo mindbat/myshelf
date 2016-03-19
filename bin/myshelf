@@ -1,7 +1,7 @@
 #!/bin/bash
 
 socket_command () {
-  echo "$1|$2" | nc localhost 6001
+  echo "$1|$2|$3" | nc localhost 6001
 }
 
 socket_command "$@"
