@@ -33,10 +33,10 @@
 (defn add-book-review
   "Add a book review. Automatically adds book to read shelf."
   [consumer access-token book-id rating & [review-text]]
-  (let [review-url (build-url "review")
+  (let [review-url (build-url "review.xml")
         params (merge {:format "xml"
                        :book_id book-id
-                       (keyword "review[rating") rating
+                       (keyword "review[rating]") rating
                        :shelf "read"}
                       (when review-text
                         {(keyword "review[review]") review-text}))]
