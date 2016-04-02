@@ -12,4 +12,4 @@
                  [robert/bruce "0.8.0"]
                  [server-socket "1.0.0"]]
   :plugins [[cider/cider-nrepl "0.10.1"]]
-  :jar-exclusions [#".*core.clj$"])
+  :uberjar-name "myshelf-standalone.jar")
