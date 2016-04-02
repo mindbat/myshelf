@@ -12,4 +12,5 @@
                  [robert/bruce "0.8.0"]
                  [server-socket "1.0.0"]]
   :plugins [[cider/cider-nrepl "0.10.1"]]
+  :min-lein-version "2.5.3"
   :uberjar-name "myshelf-standalone.jar")
