@@ -10,7 +10,11 @@
                                   get-consumer
                                   get-request-token
                                   get-user-id]]
-            [myshelf.books :refer [find-book-by-title]])
+            [myshelf.books :refer [find-book-by-title]]
+            [myshelf.friends :refer [get-user-friends]]
+            [myshelf.rank :refer [rank-books]]
+            [myshelf.shelves :refer [add-book-to-shelf
+                                     get-all-books-on-shelf]])
   (:gen-class))
 
 (def default-exchange "")
@@ -64,6 +68,32 @@
                   :sent-cmd "find-book"
                   :results books}))))
 
+(defn add-book
+  [channel user-handle consumer access-token book-id shelf]
+  (let [result (add-book-to-shelf consumer access-token book-id shelf)]
+    (lb/publish channel default-exchange reply-queue
+                (json/generate-string
+                 {:user-handle user-handle
+                  :sent-cmd "add-book"
+                  :results result}))))
+
+(defn rank-books-on-shelf
+  [consumer access-token user-id shelf]
+  (let [books (get-all-books-on-shelf consumer access-token
+                                      user-id shelf)
+        friends (get-user-friends consumer access-token user-id)]
+    (rank-books consumer access-token books friends)))
+
+(defn rank-to-read-books
+  [channel user-handle consumer access-token user-id]
+  (let [results (take 10 (rank-books-on-shelf consumer access-token
+                                              user-id "to-read"))]
+    (lb/publish channel default-exchange reply-queue
+                (json/generate-string
+                 {:user-handle user-handle
+                  :sent-cmd "rank-books"
+                  :results results}))))
+
 (defn process-command
   [channel user-handle cmd [arg-1 arg-2]]
   (let [handle (keyword user-handle)
@@ -73,7 +103,13 @@
                                 user-handle
                                 consumer
                                 access-token
-                                arg-1))))
+                                arg-1)
+      (= "rank" cmd) (rank-to-read-books channel user-handle
+                                         consumer access-token
+                                         user-id)
+      (= "add" cmd) (add-book channel user-handle
+                              consumer access-token
+                              arg-1 "to-read"))))
 
 (defn handle-message
   [channel metadata body]
