@@ -1,4 +1,4 @@
-(ns myshelf.core
+(ns myshelf.socket
   (:require [clojure.java.io :refer [reader writer]]
             [doric.core :refer [table]]
             [myshelf.auth :refer [find-approval-uri
