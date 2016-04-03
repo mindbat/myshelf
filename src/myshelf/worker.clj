@@ -84,12 +84,24 @@
       (process-command channel user-handle cmd args)
       (request-goodreads-access channel user-handle))))
 
+(defn declare-reply-queue
+  [channel]
+  (lq/declare channel reply-queue {:auto-delete false}))
+
+(defn get-reply
+  "Pull a single message off of the reply queue"
+  [channel]
+  (declare-reply-queue channel)
+  (when-let [reply (lb/get channel reply-queue)]
+    (-> reply
+        second
+        (String. "UTF-8")
+        (json/parse-string true))))
+
 (defn -main [& [key secret]]
   (let [conn (lc/connect)
         channel (lch/open conn)]
     (compare-and-set! goodreads-key nil key)
     (compare-and-set! goodreads-secret nil secret)
-    (lq/declare channel worker-queue
-                {:auto-delete false})
-    (lcs/subscribe channel worker-queue
-                   handle-message {:auto-ack true})))
+    (lq/declare channel worker-queue {:auto-delete false})
+    (lcs/subscribe channel worker-queue handle-message {:auto-ack true})))
