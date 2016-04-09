@@ -57,18 +57,22 @@
          last)))
 
 (defn generate-status
-  [msg url cmd results]
+  [{:keys [msg url sent-cmd sent-args results]}]
   (cond
     (or msg url) (str msg ":" url)
-    (= "rank-books" cmd) (str/join "\n" (map :title results))
-    (= "add-book" cmd) (if (= "200" (:status results))
-                         "SUCCESS"
-                         (str "FAILURE: " (:status results)))
-    (= "find-book" cmd) (str/join "\n"
-                                  (map #(format "%s|%s|%s" (:id %)
-                                                (:title %)
-                                                (:author %))
-                                       (take 2 results)))))
+    (= "rank-books" sent-cmd) (str/join "\n" (map :title
+                                                  (take 3 results)))
+    (= "add-book" sent-cmd) (if results
+                              (format "Added %s to %s" (first sent-args)
+                                      (second sent-args))
+                              (format "Could not add %s to %s"
+                                      (first sent-args)
+                                      (second sent-args)))
+    (= "find-book" sent-cmd) (str/join "\n"
+                                       (map #(format "%s|%s|%s" (:id %)
+                                                     (:title %)
+                                                     (:author %))
+                                            (take 2 results)))))
 
 (defn handle-reply
   [creds channel metadata body]
