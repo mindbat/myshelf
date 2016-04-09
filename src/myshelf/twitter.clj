@@ -72,13 +72,17 @@
 
 (defn handle-reply
   [creds channel metadata body]
-  (let [{:keys [user-handle msg url sent-cmd results]}
-        (json/parse-string (String. body "UTF-8") true)
-        status (generate-status msg url sent-cmd results)]
-    (twitter/statuses-update :oauth-creds creds
-                             :params {:status (str "@" user-handle
-                                                   "\n"
-                                                   status)})))
+  (let [parsed-body (json/parse-string (String. body "UTF-8") true)
+        status (generate-status parsed-body)]
+    (try (twitter/statuses-update :oauth-creds creds
+                                  :params
+                                  {:status (str "@"
+                                                (:user-handle parsed-body)
+                                                "\n"
+                                                status)})
+         (catch Exception ex
+           (println "error attempting to post status" status)
+           (println (.getMessage ex))))))
 
 (defn -main [& args]
   (let [conn (lc/connect)
