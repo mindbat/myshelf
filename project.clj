@@ -12,7 +12,8 @@
                  [com.novemberain/langohr "3.5.1"]
                  [doric "0.9.0"]
                  [robert/bruce "0.8.0"]
-                 [server-socket "1.0.0"]]
+                 [server-socket "1.0.0"]
+                 [twitter-api "0.7.8"]]
   :plugins [[cider/cider-nrepl "0.10.1"]]
   :min-lein-version "2.5.3"
   :uberjar-name "myshelf-standalone.jar")
