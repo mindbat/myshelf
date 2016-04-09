@@ -75,6 +75,7 @@
                 (json/generate-string
                  {:user-handle user-handle
                   :sent-cmd "add-book"
+                  :sent-args [book-id shelf]
                   :results result}))))
 
 (defn rank-books-on-shelf
