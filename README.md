@@ -32,4 +32,4 @@ Now fetch your user id to make sure everything's working:
 
 ## Examples
 
-See myshelf.core and the scripts in the bin/ directory for an example cli application built using myshelf.
+See myshelf.socket and the scripts in the bin/ directory for an example cli application built using myshelf.
