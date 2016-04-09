@@ -75,7 +75,10 @@
   (let [add-url (build-url "shelf" "add_to_shelf.xml")
         params {:name shelf
                 :book_id book-id}]
-    (make-auth-request-POST consumer
-                            access-token
-                            add-url
-                            params)))
+    (try
+      (make-auth-request-POST consumer
+                              access-token
+                              add-url
+                              params)
+      (catch Exception ex
+        nil))))
