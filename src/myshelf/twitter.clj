@@ -38,18 +38,23 @@
   [channel tweet]
   (let [cmd (make-command tweet)]
     (lb/publish channel default-exchange worker-queue
-                (json/generate-string cmd))))
+                (json/generate-string cmd))
+    (:id tweet)))
 
 (defn check-tweets
-  [channel creds screen-name]
+  [channel creds screen-name current-id]
   (let [tweets (twitter/statuses-user-timeline
                 :oauth-creds creds
-                :params {:screen-name screen-name
-                         :count 10})]
+                :params (merge {:screen-name screen-name
+                                :count 10}
+                               (when current-id
+                                 {:since_id current-id})))]
     (->> tweets
          :body
+         (sort-by :id)
          (filter #(.contains (:text %) "myshelf-bot"))
-         (map (partial send-command channel)))))
+         (map (partial send-command channel))
+         last)))
 
 (defn generate-status
   [msg url cmd results]
@@ -83,7 +88,8 @@
     (lq/declare channel reply-queue {:auto-delete false})
     (lcs/subscribe channel reply-queue (partial handle-reply creds)
                    {:auto-ack true})
-    (loop [ch channel]
-      (check-tweets ch creds screen-name)
-      (Thread/sleep (* 60 1000) #_"one minute")
-      (recur ch))))
+    (loop [ch channel
+           current-id nil]
+      (let [last-id (check-tweets ch creds screen-name current-id)]
+        (Thread/sleep (* 60 1000) #_"one minute")
+        (recur ch (or last-id current-id))))))
