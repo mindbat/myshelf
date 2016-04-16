@@ -38,8 +38,15 @@
   [channel tweet]
   (let [cmd (make-command tweet)]
     (lb/publish channel default-exchange worker-queue
-                (json/generate-string cmd))
-    (:id tweet)))
+                (json/generate-string cmd))))
+
+(defn valid-command?
+  [tweet]
+  (->> tweet
+       :text
+       (re-find #"^myshelf-bot: (add|find|rank) ((\w|-+) ?)+$")
+       first
+       boolean))
 
 (defn check-tweets
   [channel creds screen-name current-id]
@@ -48,13 +55,15 @@
                 :params (merge {:screen-name screen-name
                                 :count 10}
                                (when current-id
-                                 {:since_id current-id})))]
+                                 {:since_id current-id})))
+        last-seen-id (:id (first (:body tweets)))]
     (->> tweets
          :body
          (sort-by :id)
-         (filter #(.contains (:text %) "myshelf-bot"))
+         (filter valid-command?)
          (map (partial send-command channel))
-         last)))
+         doall)
+    last-seen-id))
 
 (defn generate-status
   [{:keys [msg url sent-cmd sent-args results]}]
