@@ -1,6 +1,9 @@
 (ns myshelf.test.twitter
-  (:require [clojure.test :refer :all]
-            [myshelf.twitter :refer :all]))
+  (:require [cheshire.core :as json]
+            [clojure.test :refer :all]
+            [langohr.basic :as lb]
+            [myshelf.twitter :refer :all]
+            [twitter.api.restful :as twitter]))
 
 (deftest t-generate-status
   ;; if have msg or url, just use that
@@ -47,3 +50,48 @@
     (is (.contains status "2|The Bone Clocks|David Mitchell"))
     ;; find book should only report 2 results
     (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))))
+
+(def sample-tweets
+  {:body [{:id 7
+           :text "myshelf-bot: find The Bone Clocks"
+           :user {:screen_name "mindbat"}}
+          {:id 6
+           :text "yolo"
+           :user {:screen_name "mindbat"}}
+          {:id 5
+           :text "myshelf-bot: add 12121212"
+           :user {:screen_name "mindbat"}}
+          {:id 4
+           :text "myshelf-bot: rank to-read"
+           :user {:screen_name "mindbat"}}
+          {:id 3
+           :text "nothing here but myshelf-bot"
+           :user {:screen_name "mindbat"}}
+          {:id 2
+           :text "@mindbat: myshelf-bot add 13456232"
+           :user {:screen_name "gozarian"}}
+          {:id 1
+           :text "myshelf-bot: what are you doing"
+           :user {:screen_name "mindbat"}}]})
+
+(deftest t-check-tweets
+  (let [published (atom [])]
+    (with-redefs [twitter/statuses-user-timeline (fn [& args]
+                                                   sample-tweets)
+                  lb/publish (fn [_ _ _ cmd]
+                               (swap! published conj cmd))]
+      (is (= 7
+             (check-tweets nil nil "mindbat" nil)))
+      (is (= 3
+             (count @published)))
+      (is (= #{{:user-handle "mindbat"
+                :cmd "find"
+                :args ["The Bone Clocks"]}
+               {:user-handle "mindbat"
+                :cmd "add"
+                :args ["12121212"]}
+               {:user-handle "mindbat"
+                :cmd "rank"
+                :args ["to-read"]}}
+             (set (map #(json/parse-string % true)
+                       @published)))))))
