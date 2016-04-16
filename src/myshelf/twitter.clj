@@ -7,6 +7,7 @@
             [langohr.consumers :as lcs]
             [langohr.queue :as lq]
             [myshelf.worker :refer [default-exchange
+                                    connection-params
                                     reply-queue
                                     worker-queue]]
             [twitter.oauth :as auth]
@@ -98,7 +99,7 @@
            (println (.getMessage ex))))))
 
 (defn -main [& args]
-  (let [conn (lc/connect)
+  (let [conn (lc/connect connection-params)
         channel (lch/open conn)
         screen-name "mindbat"
         creds (get-creds)]

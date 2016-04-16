@@ -18,6 +18,12 @@
   (:gen-class))
 
 (def default-exchange "")
+(def connection-params (or (System/getenv "CLOUDAMQP_URL")
+                           {:host "localhost"
+                            :port 5672
+                            :username "guest"
+                            :password "guest"
+                            :vhost "/"}))
 (def worker-queue "myshelf.worker")
 (def reply-queue "myshelf.reply")
 (def goodreads-creds (atom {}))
@@ -136,7 +142,7 @@
         (json/parse-string true))))
 
 (defn -main [& [key secret]]
-  (let [conn (lc/connect)
+  (let [conn (lc/connect connection-params)
         channel (lch/open conn)]
     (compare-and-set! goodreads-key nil key)
     (compare-and-set! goodreads-secret nil secret)
