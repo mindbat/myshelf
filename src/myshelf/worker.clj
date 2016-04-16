@@ -18,12 +18,13 @@
   (:gen-class))
 
 (def default-exchange "")
-(def connection-params (or (System/getenv "CLOUDAMQP_URL")
-                           {:host "localhost"
-                            :port 5672
-                            :username "guest"
-                            :password "guest"
-                            :vhost "/"}))
+(def connection-params (if-let [uri (System/getenv "CLOUDAMQP_URL")]
+                         {:uri uri}
+                         {:host "localhost"
+                          :port 5672
+                          :username "guest"
+                          :password "guest"
+                          :vhost "/"}))
 (def worker-queue "myshelf.worker")
 (def reply-queue "myshelf.reply")
 (def goodreads-creds (atom {}))
