@@ -23,8 +23,14 @@
     (is (.contains status (:title (first ranked))))
     (is (.contains status (:title (second ranked))))
     (is (.contains status (:title (nth ranked 2))))
-    (is (not (.contains status (:title (nth ranked 3)))))
-    (is (not (.contains status (:title (last ranked))))))
+    (is (.contains status (:title (nth ranked 3))))
+    ;; shouldn't have the last one
+    (is (not (.contains status (:title (last ranked)))))
+    ;; should not have anyone's ids
+    (is (not (.contains status (str (:id (first ranked))))))
+    (is (not (.contains status (str (:id (second ranked))))))
+    (is (not (.contains status (str (:id (nth ranked 2))))))
+    (is (not (.contains status (str (:id (nth ranked 3)))))))
   (let [add-results {:random "text"}
         add-sent-args ["random-number" "to-read"]]
     ;; add book should report success if any results
