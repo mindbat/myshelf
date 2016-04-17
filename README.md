@@ -1,6 +1,9 @@
 # myshelf
 Set of functions for accessing goodreads via clojure
 
+## Build Status
+[![Build Status](https://travis-ci.org/mindbat/myshelf.svg?branch=master)](https://travis-ci.org/mindbat/myshelf)
+
 ## Installation
 
 In your project.clj, add myshelf as a dependency:
