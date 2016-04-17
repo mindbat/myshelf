@@ -28,8 +28,8 @@
 (def worker-queue "myshelf.worker")
 (def reply-queue "myshelf.reply")
 (def goodreads-creds (atom {}))
-(def goodreads-key (atom nil))
-(def goodreads-secret (atom nil))
+(def goodreads-key (System/getenv "GOODREADS_KEY"))
+(def goodreads-secret (System/getenv "GOODREADS_SECRET"))
 
 (defn add-access-token
   [user-handle creds]
@@ -53,7 +53,7 @@
   [channel user-handle]
   (let [creds ((keyword user-handle) @goodreads-creds)
         consumer (or (:consumer creds)
-                     (get-consumer @goodreads-key @goodreads-secret))
+                     (get-consumer goodreads-key goodreads-secret))
         request-token (or (:request-token creds)
                           (get-request-token consumer))
         approval-uri (find-approval-uri consumer request-token)]
@@ -142,10 +142,8 @@
         (String. "UTF-8")
         (json/parse-string true))))
 
-(defn -main [& [key secret]]
+(defn -main [& args]
   (let [conn (lc/connect connection-params)
         channel (lch/open conn)]
-    (compare-and-set! goodreads-key nil key)
-    (compare-and-set! goodreads-secret nil secret)
     (lq/declare channel worker-queue {:auto-delete false})
     (lcs/subscribe channel worker-queue handle-message {:auto-ack true})))
