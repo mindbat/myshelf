@@ -66,6 +66,13 @@
          doall)
     last-seen-id))
 
+(defn book->string
+  [{:keys [id title author]}]
+  (let [trimmed-title (if (> (count title) 30)
+                        (str (subs title 0 25) "...")
+                        title)]
+    (format "%s|%s|%s" id trimmed-title author)))
+
 (defn generate-status
   [{:keys [msg url sent-cmd sent-args results]}]
   (cond
@@ -78,11 +85,10 @@
                               (format "Could not add %s to %s"
                                       (first sent-args)
                                       (second sent-args)))
-    (= "find-book" sent-cmd) (str/join "\n"
-                                       (map #(format "%s|%s|%s" (:id %)
-                                                     (:title %)
-                                                     (:author %))
-                                            (take 2 results)))))
+    (= "find-book" sent-cmd) (->> results
+                                  (take 3)
+                                  (map book->string)
+                                  (str/join "\n"))))
 
 (defn handle-reply
   [creds channel metadata body]
