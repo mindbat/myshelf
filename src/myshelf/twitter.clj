@@ -91,7 +91,7 @@
                                       (first sent-args)
                                       (second sent-args)))
     (= "find-book" sent-cmd)   (->> results
-                                    (take 3)
+                                    (take 2)
                                     (map book->string)
                                     (str/join "\n"))))
 

@@ -56,8 +56,8 @@
     ;; find book should report id and title and author
     (is (.contains status "1|Full Fathom Five|Max Gladwell"))
     (is (.contains status "2|The Bone Clocks|David Mitchell"))
-    (is (.contains status "3|Footsteps in the Sky|Greg Keyes"))
-    ;; find book should only report 3 results
+    ;; find book should only report 2 results
+    (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))
     (is (not (.contains status "4|The Martian|Andy Weir")))))
 
 (deftest t-generate-status-char-limit
@@ -79,8 +79,8 @@
     ;; should have shortened both titles
     (is (.contains status "1|The End of Alchemy: Money...|Mervyn King"))
     (is (.contains status "2|A Monument to the End of ...|Jay Weidner"))
-    ;; should have left the third one untrimmed
-    (is (.contains status "3|Footsteps in the Sky|Greg Keyes"))))
+    ;; should have left the third one out
+    (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))))
 
 (def sample-tweets
   {:body [{:id 7
