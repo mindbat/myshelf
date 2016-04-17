@@ -1,10 +1,12 @@
 (ns myshelf.test.friends
   (:require [clojure.test :refer :all]
             [myshelf.db :refer [clean-db-fixture
-                                insert-friends]]
+                                insert-friends
+                                migrate-db-fixture]]
             [myshelf.friends :refer :all]))
 
 (use-fixtures :once
+  migrate-db-fixture
   clean-db-fixture)
 
 (deftest t-user-friends-from-db

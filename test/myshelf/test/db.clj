@@ -3,6 +3,7 @@
             [myshelf.db :refer :all]))
 
 (use-fixtures :once
+  migrate-db-fixture
   clean-db-fixture)
 
 (deftest t-friends-crud
