@@ -23,8 +23,14 @@
     (is (.contains status (:title (first ranked))))
     (is (.contains status (:title (second ranked))))
     (is (.contains status (:title (nth ranked 2))))
-    (is (not (.contains status (:title (nth ranked 3)))))
-    (is (not (.contains status (:title (last ranked))))))
+    (is (.contains status (:title (nth ranked 3))))
+    ;; shouldn't have the last one
+    (is (not (.contains status (:title (last ranked)))))
+    ;; should not have anyone's ids
+    (is (not (.contains status (str (:id (first ranked))))))
+    (is (not (.contains status (str (:id (second ranked))))))
+    (is (not (.contains status (str (:id (nth ranked 2))))))
+    (is (not (.contains status (str (:id (nth ranked 3)))))))
   (let [add-results {:random "text"}
         add-sent-args ["random-number" "to-read"]]
     ;; add book should report success if any results
@@ -42,14 +48,39 @@
                       {:id 2 :title "The Bone Clocks"
                        :author "David Mitchell"}
                       {:id 3 :title "Footsteps in the Sky"
-                       :author "Greg Keyes"}]
+                       :author "Greg Keyes"}
+                      {:id 4 :title "The Martian"
+                       :author "Andy Weir"}]
         status (generate-status {:sent-cmd "find-book"
                                  :results find-results})]
     ;; find book should report id and title and author
     (is (.contains status "1|Full Fathom Five|Max Gladwell"))
     (is (.contains status "2|The Bone Clocks|David Mitchell"))
-    ;; find book should only report 2 results
-    (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))))
+    (is (.contains status "3|Footsteps in the Sky|Greg Keyes"))
+    ;; find book should only report 3 results
+    (is (not (.contains status "4|The Martian|Andy Weir")))))
+
+(deftest t-generate-status-char-limit
+  (let [find-results [{:id 1
+                       :title (str "The End of Alchemy"
+                                   ": Money, Banking, and the "
+                                   "Future of the Global Economy")
+                       :author "Mervyn King"}
+                      {:id 2
+                       :title (str "A Monument to the End of Time: "
+                                   "Alchemy, Fulcanelli, & the Great Cross")
+                       :author "Jay Weidner"}
+                      {:id 3 :title "Footsteps in the Sky"
+                       :author "Greg Keyes"}]
+        status (generate-status {:sent-cmd "find-book"
+                                 :results find-results})]
+    ;; status should be less than 140 characters long
+    (is (> 140 (count status)))
+    ;; should have shortened both titles
+    (is (.contains status "1|The End of Alchemy: Money...|Mervyn King"))
+    (is (.contains status "2|A Monument to the End of ...|Jay Weidner"))
+    ;; should have left the third one untrimmed
+    (is (.contains status "3|Footsteps in the Sky|Greg Keyes"))))
 
 (def sample-tweets
   {:body [{:id 7
