@@ -2,8 +2,15 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer :all]
             [langohr.basic :as lb]
+            [myshelf.db :as db]
             [myshelf.twitter :refer :all]
             [twitter.api.restful :as twitter]))
+
+(use-fixtures :once
+  db/migrate-db-fixture)
+
+(use-fixtures :each
+  db/clean-db-fixture)
 
 (deftest t-generate-status
   ;; if have msg or url, just use that
@@ -126,3 +133,33 @@
                 :args ["to-read"]}}
              (set (map #(json/parse-string % true)
                        @published)))))))
+
+(deftest t-listen-for-tweets
+  (let [published (atom [])]
+    (with-redefs [twitter/statuses-user-timeline (fn [& args]
+                                                   sample-tweets)
+                  lb/publish (fn [_ _ _ cmd]
+                               (swap! published conj cmd))]
+      (let [listen-fut (future (listen-for-tweets nil nil "mindbat" 1000))]
+        (Thread/sleep 100)
+        (is (= 3
+               (count @published)))
+        (is (= #{{:user-handle "mindbat"
+                  :cmd "find"
+                  :args ["The Bone Clocks"]}
+                 {:user-handle "mindbat"
+                  :cmd "add"
+                  :args ["12121212"]}
+                 {:user-handle "mindbat"
+                  :cmd "rank"
+                  :args ["to-read"]}}
+               (set (map #(json/parse-string % true)
+                         @published))))
+        (future-cancel listen-fut)
+        (is (= 7 (:last_tweet (db/find-last-tweet "mindbat")))))
+      (reset! published [])
+      (let [listen-fut (future (listen-for-tweets nil nil "mindbat" 1000))]
+        (is (= 0
+               (count @published)))
+        (future-cancel listen-fut)
+        (is (= 7 (:last_tweet (db/find-last-tweet "mindbat"))))))))

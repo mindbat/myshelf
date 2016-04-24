@@ -70,6 +70,22 @@
                        ["user_id = ?" user-id])
       (find-by-id user-id))))
 
+(defn find-last-tweet
+  [screen-name]
+  (first (sql/query db-spec
+                    ["SELECT * FROM user_tweets WHERE screen_name = ?"
+                     screen-name])))
+
+(defn update-last-tweet
+  [screen-name tweet-id]
+  (if (find-last-tweet screen-name)
+    (sql/update! db-spec :user_tweets
+                 {:last_tweet tweet-id}
+                 ["screen_name = ?" screen-name])
+    (sql/insert! db-spec :user_tweets
+                 {:screen_name screen-name
+                  :last_tweet tweet-id})))
+
 (defn insert-user
   [user-id user-handle {:keys [oauth_token oauth_token_secret]}]
   (-> (sql/insert! db-spec
