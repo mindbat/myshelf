@@ -17,7 +17,7 @@
 
 (defn clean-db-fixture
   [f]
-  (sql/execute! db-spec ["TRUNCATE TABLE user_friends"])
+  (sql/execute! db-spec ["TRUNCATE TABLE users"])
   (f))
 
 (defn migrate-db-fixture
@@ -34,39 +34,55 @@
 
 (defn pgarray->vec
   [pga]
-  (vec (.getArray pga)))
+  (when pga
+    (vec (.getArray pga))))
 
 (defn fix-friends
   [result]
-  {:user-id (:user_id result)
-   :friends (pgarray->vec (:friends result))})
+  (merge result
+         {:user-id (:user_id result)
+          :friends (pgarray->vec (:friends result))}))
 
 (defn find-by-id
   [user-id]
-  (sql/query db-spec
-             ["SELECT * FROM user_friends WHERE user_id = ?"
-              user-id]
-             :row-fn fix-friends))
+  (first (sql/query db-spec
+                    ["SELECT * FROM users WHERE user_id = ?"
+                     user-id]
+                    :row-fn fix-friends)))
+
+(defn find-by-handle
+  [user-handle]
+  (first (sql/query db-spec
+                    ["SELECT * FROM users WHERE handle = ?"
+                     user-handle]
+                    :row-fn fix-friends)))
 
 (defn pull-friends
   [user-id]
   (-> (find-by-id user-id)
-      first
       :friends))
 
 (defn update-friends
   [user-id friends-list]
   (sql/with-db-connection [conn db-spec]
-    (when (sql/update! conn :user_friends
+    (when (sql/update! conn :users
                        {:friends (vec->pgarray conn friends-list)}
                        ["user_id = ?" user-id])
-      (first (find-by-id user-id)))))
+      (find-by-id user-id))))
 
-(defn insert-friends
-  [user-id friends-list]
-  (sql/with-db-connection [conn db-spec]
-    (-> (sql/insert! conn :user_friends
-                     {:user_id user-id
-                      :friends (vec->pgarray conn friends-list)})
-        first
-        fix-friends)))
+(defn insert-user
+  [user-id user-handle {:keys [oauth_token oauth_token_secret]}]
+  (-> (sql/insert! db-spec
+                   :users
+                   {:user_id user-id
+                    :handle user-handle
+                    :access_token oauth_token
+                    :access_token_secret oauth_token_secret})
+      first))
+
+(defn get-access-token
+  [user-handle]
+  (let [{:keys [access_token access_token_secret]} (find-by-handle
+                                                    user-handle)]
+    {:oauth_token access_token
+     :oauth_token_secret access_token_secret}))
