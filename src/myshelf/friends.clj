@@ -3,7 +3,7 @@
             [myshelf.common :refer [build-url
                                     element->map
                                     try-int]]
-            [myshelf.db :refer [pull-friends insert-friends]]
+            [myshelf.db :refer [pull-friends update-friends]]
             [myshelf.reviews :refer [get-book-rating]]))
 
 (defn get-user-friends
@@ -23,7 +23,7 @@
                        :content
                        (map element->map)
                        (map :user))]
-      (insert-friends user-id (map :id friends))
+      (update-friends user-id (map :id friends))
       friends)))
 
 (defn get-friend-ratings-for-book
