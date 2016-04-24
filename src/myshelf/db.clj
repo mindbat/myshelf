@@ -34,24 +34,32 @@
 
 (defn pgarray->vec
   [pga]
-  (vec (.getArray pga)))
+  (when pga
+    (vec (.getArray pga))))
 
 (defn fix-friends
   [result]
-  {:user-id (:user_id result)
-   :friends (pgarray->vec (:friends result))})
+  (merge result
+         {:user-id (:user_id result)
+          :friends (pgarray->vec (:friends result))}))
 
 (defn find-by-id
   [user-id]
-  (sql/query db-spec
-             ["SELECT * FROM users WHERE user_id = ?"
-              user-id]
-             :row-fn fix-friends))
+  (first (sql/query db-spec
+                    ["SELECT * FROM users WHERE user_id = ?"
+                     user-id]
+                    :row-fn fix-friends)))
+
+(defn find-by-handle
+  [user-handle]
+  (first (sql/query db-spec
+                    ["SELECT * FROM users WHERE handle = ?"
+                     user-handle]
+                    :row-fn fix-friends)))
 
 (defn pull-friends
   [user-id]
   (-> (find-by-id user-id)
-      first
       :friends))
 
 (defn update-friends
@@ -60,7 +68,7 @@
     (when (sql/update! conn :users
                        {:friends (vec->pgarray conn friends-list)}
                        ["user_id = ?" user-id])
-      (first (find-by-id user-id)))))
+      (find-by-id user-id))))
 
 (defn insert-user
   [user-id user-handle {:keys [oauth_token oauth_token_secret]}]
@@ -74,9 +82,7 @@
 
 (defn get-access-token
   [user-handle]
-  (let [results (sql/query db-spec
-                           ["SELECT * FROM users WHERE handle = ?"
-                            user-handle])
-        {:keys [access_token access_token_secret]} (first results)]
+  (let [{:keys [access_token access_token_secret]} (find-by-handle
+                                                    user-handle)]
     {:oauth_token access_token
      :oauth_token_secret access_token_secret}))
