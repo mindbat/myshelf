@@ -10,7 +10,8 @@
                                   get-consumer
                                   get-request-token
                                   get-user-id]]
-            [myshelf.books :refer [find-book-by-title]]
+            [myshelf.books :refer [find-book-by-title
+                                   find-book-by-title-and-author]]
             [myshelf.db :as db]
             [myshelf.friends :refer [get-user-friends]]
             [myshelf.rank :refer [rank-books]]
@@ -86,13 +87,18 @@
                   :results books}))))
 
 (defn add-book
-  [channel user-handle consumer access-token book-id shelf]
-  (let [result (add-book-to-shelf consumer access-token book-id shelf)]
+  [channel user-handle consumer access-token title author shelf]
+  (let [found-books (find-book-by-title-and-author consumer
+                                                   access-token
+                                                   title author)
+        result (add-book-to-shelf consumer access-token
+                                  (:id (first found-books))
+                                  shelf)]
     (lb/publish channel default-exchange reply-queue
                 (json/generate-string
                  {:user-handle user-handle
                   :sent-cmd "add-book"
-                  :sent-args [book-id shelf]
+                  :sent-args [author title shelf]
                   :results result}))))
 
 (defn rank-books-on-shelf
@@ -127,7 +133,7 @@
                                          user-id)
       (= "add" cmd) (add-book channel user-handle
                               consumer access-token
-                              arg-1 "to-read"))))
+                              arg-1 arg-2 "to-read"))))
 
 (defn handle-message
   [channel metadata body]
