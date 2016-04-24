@@ -14,20 +14,20 @@
                       :oauth_token_secret "gollyfluff"}]
     (insert-user user-id user-handle access-token)
     ;; insert a new friends list
-    (let [friends ["1337" "255"]]
+    (let [friends ["1337" "255"]
+          updated (update-friends user-id friends)]
       ;; should have returned the inserted data
-      (is (= {:user-id user-id
-              :friends friends}
-             (update-friends user-id friends)))
+      (is (= user-id (:user-id updated)))
+      (is (= friends (:friends updated)))
       ;; should be able to pull the friends back out
       (is (= friends
              (pull-friends user-id)))
       ;; update our friends list
-      (let [new-friends ["1337" "255" "13"]]
+      (let [new-friends ["1337" "255" "13"]
+            updated (update-friends user-id new-friends)]
         ;; should have gotten back the updated list
-        (is (= {:user-id user-id
-                :friends new-friends}
-               (update-friends user-id new-friends)))
+        (is (= user-id (:user-id updated)))
+        (is (= new-friends (:friends updated)))
         ;; should be able to fetch the updated list back out
         (is (= new-friends
                (pull-friends user-id)))))))
