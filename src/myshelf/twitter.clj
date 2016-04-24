@@ -6,6 +6,7 @@
             [langohr.core :as lc]
             [langohr.consumers :as lcs]
             [langohr.queue :as lq]
+            [myshelf.db :as db]
             [myshelf.worker :refer [default-exchange
                                     connection-params
                                     reply-queue
@@ -109,16 +110,23 @@
            (println "error attempting to post status" status)
            (println (.getMessage ex))))))
 
+(defn listen-for-tweets
+  [channel creds screen-name check-interval]
+  (loop [ch channel
+         current-id (:last_tweet (db/find-last-tweet screen-name))]
+    (let [last-id (check-tweets ch creds screen-name current-id)
+          next-id (or last-id current-id)]
+      (db/update-last-tweet screen-name next-id)
+      (Thread/sleep check-interval)
+      (recur ch next-id))))
+
 (defn -main [& args]
   (let [conn (lc/connect connection-params)
         channel (lch/open conn)
         screen-name "mindbat"
-        creds (get-creds)]
+        creds (get-creds)
+        check-interval (* 60 1000) #_"one minute"]
     (lq/declare channel reply-queue {:auto-delete false})
     (lcs/subscribe channel reply-queue (partial handle-reply creds)
                    {:auto-ack true})
-    (loop [ch channel
-           current-id nil]
-      (let [last-id (check-tweets ch creds screen-name current-id)]
-        (Thread/sleep (* 60 1000) #_"one minute")
-        (recur ch (or last-id current-id))))))
+    (listen-for-tweets channel creds screen-name check-interval)))
