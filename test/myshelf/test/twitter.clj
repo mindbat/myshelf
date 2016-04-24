@@ -97,7 +97,7 @@
            :text "yolo"
            :user {:screen_name "mindbat"}}
           {:id 5
-           :text "myshelf-bot: add 12121212"
+           :text "myshelf-bot: add The Bone Clocks by Mitchell"
            :user {:screen_name "mindbat"}}
           {:id 4
            :text "myshelf-bot: rank to-read"
@@ -106,7 +106,7 @@
            :text "nothing here but myshelf-bot"
            :user {:screen_name "mindbat"}}
           {:id 2
-           :text "@mindbat: myshelf-bot add 13456232"
+           :text "@mindbat: myshelf-bot add 1223134"
            :user {:screen_name "gozarian"}}
           {:id 1
            :text "myshelf-bot: what are you doing"
@@ -127,7 +127,7 @@
                 :args ["The Bone Clocks"]}
                {:user-handle "mindbat"
                 :cmd "add"
-                :args ["12121212"]}
+                :args ["The Bone Clocks" "Mitchell"]}
                {:user-handle "mindbat"
                 :cmd "rank"
                 :args ["to-read"]}}
@@ -149,7 +149,7 @@
                   :args ["The Bone Clocks"]}
                  {:user-handle "mindbat"
                   :cmd "add"
-                  :args ["12121212"]}
+                  :args ["The Bone Clocks" "Mitchell"]}
                  {:user-handle "mindbat"
                   :cmd "rank"
                   :args ["to-read"]}}

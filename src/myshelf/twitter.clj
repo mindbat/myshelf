@@ -31,10 +31,15 @@
                        (str/split #":" 2)
                        second
                        str/trim
-                       (str/split #" " 2))]
-    {:user-handle screen-name
-     :cmd cmd
-     :args [(first (str/split args #"\n"))]}))
+                       (str/split #" " 2))
+        trimmed-args (first (str/split args #"\n"))]
+    (if (= "add" cmd)
+      {:user-handle screen-name
+       :cmd cmd
+       :args (vec (str/split trimmed-args #" by "))}
+      {:user-handle screen-name
+       :cmd cmd
+       :args [trimmed-args]})))
 
 (defn send-command
   [channel tweet]
