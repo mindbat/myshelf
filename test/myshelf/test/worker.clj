@@ -80,3 +80,22 @@
             :sent-args ["Mitchell" "The Bone Clocks" "to-read"]
             :results @added}
            (json/parse-string (first @published) true)))))
+
+(deftest t-add-book-not-found
+  (let [found-books []
+        added (atom [])
+        published (atom [])]
+    (with-redefs [find-book-by-title-and-author (fn [& args]
+                                                  found-books)
+                  add-book-to-shelf (fn [& args]
+                                      (swap! added conj (nth args 2)))
+                  lb/publish (fn [& args] (swap! published conj (last args)))]
+      (add-book nil "mindbat" nil nil
+                "The Bone Clocks" "Davis" "to-read"))
+    (is (= 0 (count @added)))
+    (is (= 1 (count @published)))
+    (is (= {:user-handle "mindbat"
+            :sent-cmd "add-book"
+            :sent-args ["Davis" "The Bone Clocks" "to-read"]
+            :results nil}
+           (json/parse-string (first @published) true)))))

@@ -88,12 +88,13 @@
 
 (defn add-book
   [channel user-handle consumer access-token title author shelf]
-  (let [found-books (find-book-by-title-and-author consumer
-                                                   access-token
-                                                   title author)
-        result (add-book-to-shelf consumer access-token
-                                  (:id (first found-books))
-                                  shelf)]
+  (let [found-book (first (find-book-by-title-and-author consumer
+                                                         access-token
+                                                         title author))
+        result (when found-book
+                 (add-book-to-shelf consumer access-token
+                                    (:id found-book)
+                                    shelf))]
     (lb/publish channel default-exchange reply-queue
                 (json/generate-string
                  {:user-handle user-handle
