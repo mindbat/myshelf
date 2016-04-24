@@ -37,15 +37,19 @@
 (defn add-access-token
   [user-handle {:keys [consumer request-token] :as creds}]
   (try
-    (let [access-token (or (db/get-access-token user-handle)
-                           (get-access-token consumer
-                                             request-token))
-          user-id (get-user-id consumer access-token)
-          new-creds (merge creds {:user-id user-id
-                                  :access-token access-token})]
-      (when-not (db/find-by-id user-id)
-        (db/insert-user user-id user-handle access-token))
-      (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
+    (if-let [user (db/find-by-handle user-handle)]
+      (let [access-token {:oauth_token (:access_token user)
+                          :oauth_token_secret (:access_token_secret user)}
+            new-creds (merge creds {:user-id (:user-id user)
+                                    :access-token access-token})]
+        (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
+      (let [access-token (get-access-token consumer
+                                           request-token)
+            user-id (get-user-id consumer access-token)
+            new-creds (merge creds {:user-id user-id
+                                    :access-token access-token})]
+        (db/insert-user user-id user-handle access-token)
+        (swap! goodreads-creds merge {(keyword user-handle) new-creds})))
     (catch Exception ex
       false)))
 
