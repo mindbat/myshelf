@@ -10,8 +10,7 @@
                                   get-consumer
                                   get-request-token
                                   get-user-id]]
-            [myshelf.books :refer [find-book-by-title
-                                   find-book-by-title-and-author]]
+            [myshelf.books :refer [find-book-by-title-and-author]]
             [myshelf.db :as db]
             [myshelf.friends :refer [get-user-friends]]
             [myshelf.rank :refer [rank-books]]
@@ -77,15 +76,6 @@
                   :msg "Please hit the following url in your browser"
                   :url approval-uri}))))
 
-(defn find-book
-  [channel user-handle consumer access-token title]
-  (let [books (find-book-by-title consumer access-token title)]
-    (lb/publish channel default-exchange reply-queue
-                (json/generate-string
-                 {:user-handle user-handle
-                  :sent-cmd "find-book"
-                  :results books}))))
-
 (defn add-book
   [channel user-handle consumer access-token title author shelf]
   (let [found-book (first (find-book-by-title-and-author consumer
@@ -124,11 +114,6 @@
   (let [handle (keyword user-handle)
         {:keys [consumer access-token user-id]} (handle @goodreads-creds)]
     (cond
-      (= "find" cmd) (find-book channel
-                                user-handle
-                                consumer
-                                access-token
-                                arg-1)
       (= "rank" cmd) (rank-to-read-books channel user-handle
                                          consumer access-token
                                          user-id)

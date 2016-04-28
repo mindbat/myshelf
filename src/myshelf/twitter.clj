@@ -51,7 +51,7 @@
   [tweet]
   (->> tweet
        :text
-       (re-find #"^myshelf-bot: (add|find|rank) ((\w|-+) ?)+$")
+       (re-find #"^myshelf-bot: (add|rank) ((\w|-+) ?)+$")
        first
        boolean))
 
@@ -91,15 +91,12 @@
                                    (map (comp trim-title :title))
                                    (str/join "\n"))
     (= "add-book" sent-cmd) (if results
-                              (format "Added %s to %s" (first sent-args)
-                                      (second sent-args))
+                              (format "Added %s to %s"
+                                      (first sent-args)
+                                      (last sent-args))
                               (format "Could not add %s to %s"
                                       (first sent-args)
-                                      (second sent-args)))
-    (= "find-book" sent-cmd)   (->> results
-                                    (take 2)
-                                    (map book->string)
-                                    (str/join "\n"))))
+                                      (last sent-args)))))
 
 (defn handle-reply
   [creds channel metadata body]
