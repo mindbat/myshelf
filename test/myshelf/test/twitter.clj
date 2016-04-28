@@ -49,45 +49,7 @@
     (is (= "Could not add random-number to to-read"
            (generate-status {:sent-cmd "add-book"
                              :results nil
-                             :sent-args add-sent-args}))))
-  (let [find-results [{:id 1 :title "Full Fathom Five"
-                       :author "Max Gladwell"}
-                      {:id 2 :title "The Bone Clocks"
-                       :author "David Mitchell"}
-                      {:id 3 :title "Footsteps in the Sky"
-                       :author "Greg Keyes"}
-                      {:id 4 :title "The Martian"
-                       :author "Andy Weir"}]
-        status (generate-status {:sent-cmd "find-book"
-                                 :results find-results})]
-    ;; find book should report id and title and author
-    (is (.contains status "1|Full Fathom Five|Max Gladwell"))
-    (is (.contains status "2|The Bone Clocks|David Mitchell"))
-    ;; find book should only report 2 results
-    (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))
-    (is (not (.contains status "4|The Martian|Andy Weir")))))
-
-(deftest t-generate-status-char-limit
-  (let [find-results [{:id 1
-                       :title (str "The End of Alchemy"
-                                   ": Money, Banking, and the "
-                                   "Future of the Global Economy")
-                       :author "Mervyn King"}
-                      {:id 2
-                       :title (str "A Monument to the End of Time: "
-                                   "Alchemy, Fulcanelli, & the Great Cross")
-                       :author "Jay Weidner"}
-                      {:id 3 :title "Footsteps in the Sky"
-                       :author "Greg Keyes"}]
-        status (generate-status {:sent-cmd "find-book"
-                                 :results find-results})]
-    ;; status should be less than 140 characters long
-    (is (> 140 (count status)))
-    ;; should have shortened both titles
-    (is (.contains status "1|The End of Alchemy: Money...|Mervyn King"))
-    (is (.contains status "2|A Monument to the End of ...|Jay Weidner"))
-    ;; should have left the third one out
-    (is (not (.contains status "3|Footsteps in the Sky|Greg Keyes")))))
+                             :sent-args add-sent-args})))))
 
 (def sample-tweets
   {:body [{:id 7
@@ -120,12 +82,9 @@
                                (swap! published conj cmd))]
       (is (= 7
              (check-tweets nil nil "mindbat" nil)))
-      (is (= 3
+      (is (= 2
              (count @published)))
       (is (= #{{:user-handle "mindbat"
-                :cmd "find"
-                :args ["The Bone Clocks"]}
-               {:user-handle "mindbat"
                 :cmd "add"
                 :args ["The Bone Clocks" "Mitchell"]}
                {:user-handle "mindbat"
@@ -142,12 +101,9 @@
                                (swap! published conj cmd))]
       (let [listen-fut (future (listen-for-tweets nil nil "mindbat" 1000))]
         (Thread/sleep 100)
-        (is (= 3
+        (is (= 2
                (count @published)))
         (is (= #{{:user-handle "mindbat"
-                  :cmd "find"
-                  :args ["The Bone Clocks"]}
-                 {:user-handle "mindbat"
                   :cmd "add"
                   :args ["The Bone Clocks" "Mitchell"]}
                  {:user-handle "mindbat"
