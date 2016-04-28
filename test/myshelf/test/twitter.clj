@@ -39,7 +39,7 @@
     (is (not (.contains status (str (:id (nth ranked 2))))))
     (is (not (.contains status (str (:id (nth ranked 3)))))))
   (let [add-results {:random "text"}
-        add-sent-args ["random-number" "to-read"]]
+        add-sent-args ["random-number" "random-author" "to-read"]]
     ;; add book should report success if any results
     (is (= "Added random-number to to-read"
            (generate-status {:sent-cmd "add-book"

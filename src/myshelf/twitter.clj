@@ -91,11 +91,12 @@
                                    (map (comp trim-title :title))
                                    (str/join "\n"))
     (= "add-book" sent-cmd) (if results
-                              (format "Added %s to %s" (first sent-args)
-                                      (second sent-args))
+                              (format "Added %s to %s"
+                                      (first sent-args)
+                                      (last sent-args))
                               (format "Could not add %s to %s"
                                       (first sent-args)
-                                      (second sent-args)))))
+                                      (last sent-args)))))
 
 (defn handle-reply
   [creds channel metadata body]
