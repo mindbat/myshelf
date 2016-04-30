@@ -1,5 +1,7 @@
 (ns myshelf.test.models.user
-  (:require [clojure.test :refer :all]
+  (:require [clj-time.coerce :as tc]
+            [clj-time.core :as t]
+            [clojure.test :refer :all]
             [myshelf.db :refer :all]
             [myshelf.models.user :refer :all]))
 
@@ -58,3 +60,25 @@
   (let [new-user (find-by-handle "dr-donna")]
     (is (nil? (:pinfeathers new-user)))
     (is (= 256 (:last_tweet new-user)))))
+
+(deftest t-update-last-tweet
+  ;; should create new user on first call
+  (let [handle "archimedes"
+        last-tweet 101]
+    (update-last-tweet handle last-tweet)
+    (let [new-user (find-by-handle handle)]
+      (is (= handle (:handle new-user)))
+      ;; user should have tweet id set
+      (is (= last-tweet (:last_tweet new-user)))
+      (is (:created_at new-user))
+      (is (:updated_at new-user))
+      (is (= (:created_at new-user)
+             (:updated_at new-user))))
+    ;; should update the user on next call
+    (let [new-tweet 256]
+      (update-last-tweet handle new-tweet)
+      (let [updated-user (find-by-handle handle)]
+        ;; last-tweet should match
+        (is (= new-tweet (:last_tweet updated-user)))
+        (is (t/after? (tc/from-sql-time (:updated_at updated-user))
+                      (tc/from-sql-time (:created_at updated-user))))))))

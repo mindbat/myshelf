@@ -1,5 +1,7 @@
 (ns myshelf.db
-  (:require [clojure.java.jdbc :as sql]
+  (:require [clj-time.coerce :as tc]
+            [clj-time.core :as t]
+            [clojure.java.jdbc :as sql]
             [clojure.string :as str]
             [migratus.core :as migratus])
   (:import (org.postgresql.util PGobject)))
@@ -36,3 +38,7 @@
   [pga]
   (when pga
     (vec (.getArray pga))))
+
+(defn now-timestamp
+  []
+  (tc/to-sql-time (t/now)))

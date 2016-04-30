@@ -6,7 +6,7 @@
             [langohr.core :as lc]
             [langohr.consumers :as lcs]
             [langohr.queue :as lq]
-            [myshelf.db :as db]
+            [myshelf.models.user :as user]
             [myshelf.worker :refer [default-exchange
                                     connection-params
                                     reply-queue
@@ -115,10 +115,10 @@
 (defn listen-for-tweets
   [channel creds screen-name check-interval]
   (loop [ch channel
-         current-id (:last_tweet (db/find-last-tweet screen-name))]
+         current-id (:last_tweet (user/find-by-handle screen-name))]
     (let [last-id (check-tweets ch creds screen-name current-id)
           next-id (or last-id current-id)]
-      (db/update-last-tweet screen-name next-id)
+      (user/update-last-tweet screen-name next-id)
       (Thread/sleep check-interval)
       (recur ch next-id))))
 

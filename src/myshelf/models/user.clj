@@ -1,6 +1,7 @@
 (ns myshelf.models.user
   (:require [clojure.java.jdbc :as sql]
-            [myshelf.db :refer [db-spec]]))
+            [myshelf.db :refer [db-spec
+                                now-timestamp]]))
 
 (defn find-by-goodreads-id
   ([goodreads-id]
@@ -19,9 +20,9 @@
                       handle]))))
 
 (defn create-user
-  [& {:keys [handle last-tweet goodreads-id
+  [& {:keys [db-conn handle last-tweet goodreads-id
              oauth-token oauth-token-secret]}]
-  (sql/with-db-transaction [conn db-spec]
+  (sql/with-db-transaction [conn (or db-conn db-spec)]
     (when (find-by-handle conn handle)
       (throw (Exception. "User with that handle already exists")))
     (when (find-by-goodreads-id conn goodreads-id)
@@ -38,8 +39,21 @@
                   :oauth_token_secret oauth-token-secret})))
 
 (defn update-user
-  [user-map]
-  (sql/update! db-spec
-               :users
-               user-map
-               ["user_id = ?" (:user_id user-map)]))
+  ([user-map]
+   (update-user db-spec user-map))
+  ([db-conn user-map]
+   (sql/update! db-conn
+                :users
+                (merge user-map
+                       {:updated_at (now-timestamp)})
+                ["user_id = ?" (:user_id user-map)])))
+
+(defn update-last-tweet
+  [handle last-tweet]
+  (sql/with-db-transaction [db-conn db-spec]
+    (if-let [current-user (find-by-handle db-conn handle)]
+      (update-user db-conn (merge current-user
+                                  {:last_tweet last-tweet}))
+      (create-user :db-conn db-conn
+                   :handle handle
+                   :last-tweet last-tweet))))
