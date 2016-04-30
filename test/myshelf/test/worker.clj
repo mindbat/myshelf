@@ -6,6 +6,7 @@
                                   get-user-id]]
             [myshelf.books :refer [find-book-by-title-and-author]]
             [myshelf.db :as db]
+            [myshelf.models.user :as user]
             [myshelf.shelves :refer [add-book-to-shelf]]
             [myshelf.worker :refer :all]))
 
@@ -22,7 +23,11 @@
                            :oauth_token_secret "gollyfluff"}]
     (is (not (goodreads-access-for-user? user-handle)))
     ;; insert user into db
-    (db/insert-user "42" user-handle user-access-token)
+    (user/create-user :goodreads-id "42"
+                      :handle user-handle
+                      :oauth-token (:oauth_token user-access-token)
+                      :oauth-token-secret (:oauth_token_secret
+                                           user-access-token))
     ;; should now return true
     (is (goodreads-access-for-user? user-handle))
     ;; creds should include handle and info
@@ -42,13 +47,13 @@
       ;; call again; should be true now
       (is (goodreads-access-for-user? user-handle)))
     ;; should have updated db
-    (let [user (db/find-by-id "7")]
+    (let [user (user/find-by-goodreads-id "7")]
       (is (= "ford"
              (:handle user)))
       (is (= "pinfeathers"
-             (:access_token user)))
+             (:oauth_token user)))
       (is (= "gollyfluff"
-             (:access_token_secret user))))
+             (:oauth_token_secret user))))
     ;; should have updated creds atom
     (let [creds (:ford @goodreads-creds)]
       (is (= "7"

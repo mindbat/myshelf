@@ -13,6 +13,7 @@
             [myshelf.books :refer [find-book-by-title-and-author]]
             [myshelf.db :as db]
             [myshelf.friends :refer [get-user-friends]]
+            [myshelf.models.user :as user]
             [myshelf.rank :refer [rank-books]]
             [myshelf.shelves :refer [add-book-to-shelf
                                      get-all-books-on-shelf]])
@@ -37,10 +38,10 @@
 (defn add-access-token
   [user-handle {:keys [consumer request-token] :as creds}]
   (try
-    (if-let [user (db/find-by-handle user-handle)]
-      (let [access-token {:oauth_token (:access_token user)
-                          :oauth_token_secret (:access_token_secret user)}
-            new-creds (merge creds {:user-id (:user-id user)
+    (if-let [user (user/find-by-handle user-handle)]
+      (let [access-token {:oauth_token (:oauth_token user)
+                          :oauth_token_secret (:oauth_token_secret user)}
+            new-creds (merge creds {:user-id (:goodreads_id user)
                                     :access-token access-token})]
         (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
       (let [access-token (get-access-token consumer
@@ -48,7 +49,11 @@
             user-id (get-user-id consumer access-token)
             new-creds (merge creds {:user-id user-id
                                     :access-token access-token})]
-        (db/insert-user user-id user-handle access-token)
+        (user/create-user :goodreads-id user-id
+                          :handle user-handle
+                          :oauth-token (:oauth_token access-token)
+                          :oauth-token-secret (:oauth_token_secret
+                                               access-token))
         (swap! goodreads-creds merge {(keyword user-handle) new-creds})))
     (catch Exception ex
       false)))

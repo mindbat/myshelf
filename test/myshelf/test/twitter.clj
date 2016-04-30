@@ -3,6 +3,7 @@
             [clojure.test :refer :all]
             [langohr.basic :as lb]
             [myshelf.db :as db]
+            [myshelf.models.user :as user]
             [myshelf.twitter :refer :all]
             [twitter.api.restful :as twitter]))
 
@@ -112,10 +113,10 @@
                (set (map #(json/parse-string % true)
                          @published))))
         (future-cancel listen-fut)
-        (is (= 7 (:last_tweet (db/find-last-tweet "mindbat")))))
+        (is (= 7 (:last_tweet (user/find-by-handle "mindbat")))))
       (reset! published [])
       (let [listen-fut (future (listen-for-tweets nil nil "mindbat" 1000))]
         (is (= 0
                (count @published)))
         (future-cancel listen-fut)
-        (is (= 7 (:last_tweet (db/find-last-tweet "mindbat"))))))))
+        (is (= 7 (:last_tweet (user/find-by-handle "mindbat"))))))))
