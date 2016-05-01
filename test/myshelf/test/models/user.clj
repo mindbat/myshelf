@@ -140,3 +140,30 @@
         (is (= new-tweet (:last_tweet updated-user)))
         (is (t/after? (tc/from-sql-time (:updated_at updated-user))
                       (tc/from-sql-time (:created_at updated-user))))))))
+
+(deftest t-update-oauth
+  ;; should create new user on first call
+  (let [handle "archimedes"
+        goodreads-id "42"
+        oauth-token "token"
+        oauth-token-secret "secret"]
+    (update-oauth handle goodreads-id oauth-token oauth-token-secret)
+    (let [new-user (find-by-handle handle)]
+      (is (= handle (:handle new-user)))
+      ;; user should have oauth set
+      (is (= oauth-token (:oauth_token new-user)))
+      (is (= oauth-token-secret (:oauth_token_secret new-user)))
+      (is (:created_at new-user))
+      (is (:updated_at new-user))
+      (is (= (:created_at new-user)
+             (:updated_at new-user))))
+    ;; should update the user on next call
+    (let [new-token "newtoken"
+          new-token-secret "newsecret"]
+      (update-oauth handle goodreads-id new-token new-token-secret)
+      (let [updated-user (find-by-handle handle)]
+        ;; oauth should match
+        (is (= new-token (:oauth_token updated-user)))
+        (is (= new-token-secret (:oauth_token_secret updated-user)))
+        (is (t/after? (tc/from-sql-time (:updated_at updated-user))
+                      (tc/from-sql-time (:created_at updated-user))))))))
