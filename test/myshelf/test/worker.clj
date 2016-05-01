@@ -59,7 +59,11 @@
       (is (= "7"
              (:user-id creds)))
       (is (= user-access-token
-             (:access-token creds))))))
+             (:access-token creds)))))
+  ;; if user exists but has no auth, should return false
+  (let [handle "archimedes"]
+    (user/create-user :handle handle :last-tweet 24)
+    (is (not (goodreads-access-for-user? handle)))))
 
 (deftest t-add-book
   (let [found-books [{:id "12"

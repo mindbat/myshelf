@@ -38,23 +38,24 @@
 (defn add-access-token
   [user-handle {:keys [consumer request-token] :as creds}]
   (try
-    (if-let [user (user/find-by-handle user-handle)]
-      (let [access-token {:oauth_token (:oauth_token user)
-                          :oauth_token_secret (:oauth_token_secret user)}
-            new-creds (merge creds {:user-id (:goodreads_id user)
-                                    :access-token access-token})]
-        (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
-      (let [access-token (get-access-token consumer
-                                           request-token)
-            user-id (get-user-id consumer access-token)
-            new-creds (merge creds {:user-id user-id
-                                    :access-token access-token})]
-        (user/create-user :goodreads-id user-id
-                          :handle user-handle
-                          :oauth-token (:oauth_token access-token)
-                          :oauth-token-secret (:oauth_token_secret
-                                               access-token))
-        (swap! goodreads-creds merge {(keyword user-handle) new-creds})))
+    (let [{:keys [goodreads_id oauth_token oauth_token_secret]}
+          (user/find-by-handle user-handle)]
+      (if (and goodreads_id oauth_token oauth_token_secret)
+        (let [access-token {:oauth_token oauth_token
+                            :oauth_token_secret oauth_token_secret}
+              new-creds (merge creds {:user-id goodreads_id
+                                      :access-token access-token})]
+          (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
+        (let [access-token (get-access-token consumer
+                                             request-token)
+              user-id (get-user-id consumer access-token)
+              new-creds (merge creds {:user-id user-id
+                                      :access-token access-token})]
+          (user/update-oauth user-handle
+                             user-id
+                             (:oauth_token access-token)
+                             (:oauth_token_secret access-token))
+          (swap! goodreads-creds merge {(keyword user-handle) new-creds}))))
     (catch Exception ex
       false)))
 
