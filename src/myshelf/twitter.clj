@@ -9,6 +9,7 @@
             [myshelf.models.user :as user]
             [myshelf.worker :refer [default-exchange
                                     connection-params
+                                    handle-message
                                     reply-queue
                                     worker-queue]]
             [twitter.oauth :as auth]
@@ -128,7 +129,9 @@
         screen-name "mindbat"
         creds (get-creds)
         check-interval (* 60 1000) #_"one minute"]
+    (lq/declare channel worker-queue {:auto-delete false})
     (lq/declare channel reply-queue {:auto-delete false})
+    (lcs/subscribe channel worker-queue handle-message {:auto-ack true})
     (lcs/subscribe channel reply-queue (partial handle-reply creds)
                    {:auto-ack true})
     (listen-for-tweets channel creds screen-name check-interval)))
