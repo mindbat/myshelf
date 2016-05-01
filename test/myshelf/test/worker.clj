@@ -16,6 +16,42 @@
 (use-fixtures :each
   db/clean-db-fixture)
 
+(deftest t-add-access-token
+  ;; no mocking; get-access-token and get-user-id should throw
+  ;; create new user
+  (let [handle "merlin"
+        handle-key (keyword handle)]
+    (user/create-user :handle handle :last-tweet 256)
+    ;; add-access-token should return false
+    (is (not (add-access-token handle {})))
+    ;; user in db should not have oauth
+    (let [db-user (user/find-by-handle handle)]
+      (is (nil? (:oauth_token db-user)))
+      (is (nil? (:oauth_token_secret db-user))))
+    ;; mock out get-access-token and get-user-id to pass
+    (let [access-token {:oauth_token "token"
+                        :oauth_token_secret "secret"}
+          user-id "1337"]
+      (with-redefs [get-access-token (fn [& args] access-token)
+                    get-user-id (fn [& args] user-id)]
+        ;; add-access-token should return updated creds
+        (let [ret (add-access-token handle {})]
+          (is ret)
+          (is (= access-token (:access-token (handle-key ret))))
+          (is (= user-id (:user-id (handle-key ret))))))
+      ;; user in db should have oauth
+      (let [db-user (user/find-by-handle handle)]
+        (is (= (:oauth_token access-token)
+               (:oauth_token db-user)))
+        (is (= (:oauth_token_secret access-token)
+               (:oauth_token_secret db-user))))
+      ;; no mocking out
+      ;; add-access-token should return db creds
+      (let [ret (add-access-token handle {})]
+        (is ret)
+        (is (= access-token (:access-token (handle-key ret))))
+        (is (= user-id (:user-id (handle-key ret))))))))
+
 (deftest t-goodreads-access-for-user
   ;; arbitrary handles should be false
   (let [user-handle "prefect"
