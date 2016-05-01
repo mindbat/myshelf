@@ -89,3 +89,17 @@
       (create-user :db-conn db-conn
                    :handle handle
                    :last-tweet last-tweet))))
+
+(defn update-oauth
+  [handle goodreads-id oauth-token oauth-token-secret]
+  (sql/with-db-transaction [db-conn db-spec]
+    (if-let [current-user (find-by-handle db-conn handle)]
+      (update-user db-conn (merge current-user
+                                  {:goodreads_id goodreads-id
+                                   :oauth_token oauth-token
+                                   :oauth_token_secret oauth-token-secret}))
+      (create-user :db-conn db-conn
+                   :goodreads-id goodreads-id
+                   :handle handle
+                   :oauth-token oauth-token
+                   :oauth-token-secret oauth-token-secret))))
