@@ -19,6 +19,14 @@
                      ["SELECT * FROM users WHERE handle = ?"
                       handle]))))
 
+(defn find-by-user-id
+  ([user-id]
+   (find-by-user-id db-spec user-id))
+  ([db-conn user-id]
+   (first (sql/query db-conn
+                     ["SELECT * FROM users WHERE user_id = ?"
+                      user-id]))))
+
 (defn create-user
   [& {:keys [db-conn handle last-tweet goodreads-id
              oauth-token oauth-token-secret]}]
@@ -42,11 +50,35 @@
   ([user-map]
    (update-user db-spec user-map))
   ([db-conn user-map]
-   (sql/update! db-conn
-                :users
-                (merge user-map
-                       {:updated_at (now-timestamp)})
-                ["user_id = ?" (:user_id user-map)])))
+   (when-not (:user_id user-map)
+     (throw (Exception. "Must pass user-id")))
+   (let [user-map (select-keys user-map [:handle
+                                         :user_id
+                                         :goodreads_id
+                                         :oauth_token
+                                         :oauth_token_secret
+                                         :last_tweet])]
+     (sql/with-db-transaction [t db-conn]
+       (when-not (find-by-user-id t (:user_id user-map))
+         (throw (Exception. "User does not exist")))
+       (when (:handle user-map)
+         (let [existing (find-by-handle t (:handle user-map))]
+           (when (and existing
+                      (not= (:user_id existing)
+                            (:user_id user-map)))
+             (throw (Exception. "User with that handle already exists")))))
+       (when (:goodreads_id user-map)
+         (let [existing (find-by-goodreads-id t (:goodreads_id user-map))]
+           (when (and existing
+                      (not= (:user_id existing)
+                            (:user_id user-map)))
+             (throw (Exception.
+                     "User with that goodreads-id already exists")))))
+       (sql/update! t
+                    :users
+                    (merge user-map
+                           {:updated_at (now-timestamp)})
+                    ["user_id = ?" (:user_id user-map)])))))
 
 (defn update-last-tweet
   [handle last-tweet]

@@ -61,6 +61,64 @@
     (is (nil? (:pinfeathers new-user)))
     (is (= 256 (:last_tweet new-user)))))
 
+(deftest t-update
+  ;; create new user
+  (let [handle "obrien"
+        last-tweet 256]
+    (create-user :handle handle :last-tweet last-tweet)
+    ;; add access token info
+    (let [new-user (find-by-handle handle)]
+      (update-user (merge new-user {:oauth_token "token"
+                                    :oauth_token_secret "secret"}))
+      (let [updated (find-by-handle handle)
+            updated-at (:updated_at updated)]
+        ;; should be able to pull them back
+        (is (= "token" (:oauth_token updated)))
+        (is (= "secret" (:oauth_token_secret updated)))
+        ;; updated-at should have been incremented
+        (is (t/after? (tc/from-sql-time updated-at)
+                      (tc/from-sql-time (:created_at updated))))
+        ;; add goodreads-id
+        (update-user (merge updated {:goodreads_id "42"}))
+        ;; should be able to pull back
+        (let [updated (find-by-handle handle)]
+          ;; should be able to pull them back
+          (is (= "token" (:oauth_token updated)))
+          (is (= "secret" (:oauth_token_secret updated)))
+          (is (= "42" (:goodreads_id updated)))
+          ;; updated-at should have been incremented
+          (is (t/after? (tc/from-sql-time (:updated_at updated))
+                        (tc/from-sql-time updated-at))))))
+    ;; should not be able to update without user-id
+    (is (thrown-with-msg? Exception
+                          #"Must pass user-id"
+                          (update-user {:handle handle
+                                        :last-tweet 512})))
+    ;; should not be able to update non-existent user
+    (is (thrown-with-msg? Exception
+                          #"User does not exist"
+                          (update-user {:user_id 42
+                                        :handle "morrissey"})))
+    ;; should not be able to update to existing handle
+    (create-user :handle "archimedes" :last-tweet 512)
+    (let [copy-user (find-by-handle "archimedes")]
+      (is (thrown-with-msg? Exception
+                            #"User with that handle already exists"
+                            (update-user (merge copy-user
+                                                {:handle handle}))))
+      ;; should not be able to update to existing goodreads-id
+      (is (thrown-with-msg? Exception
+                            #"User with that goodreads-id already exists"
+                            (update-user (merge copy-user
+                                                {:goodreads_id "42"}))))))
+  ;; junk attributes get thrown out
+  (create-user :handle "merlin" :last-tweet 42)
+  (let [merlin (find-by-handle "merlin")]
+    (update-user (merge merlin {:last_tweet 56 :bermuda "vacation"}))
+    (let [updated (find-by-handle "merlin")]
+      (is (= 56 (:last_tweet updated)))
+      (is (nil? (:bermuda updated))))))
+
 (deftest t-update-last-tweet
   ;; should create new user on first call
   (let [handle "archimedes"
