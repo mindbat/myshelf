@@ -115,7 +115,8 @@
                                                   found-books)
                   add-book-to-shelf (fn [& args]
                                       (swap! added conj (nth args 2)))
-                  lb/publish (fn [& args] (swap! published conj (last args)))]
+                  lb/publish (fn [& args] (swap! published conj
+                                                 (last args)))]
       (add-book nil "mindbat" nil nil
                 "The Bone Clocks" "Mitchell" "to-read"))
     (is (= 1 (count @added)))
@@ -135,7 +136,8 @@
                                                   found-books)
                   add-book-to-shelf (fn [& args]
                                       (swap! added conj (nth args 2)))
-                  lb/publish (fn [& args] (swap! published conj (last args)))]
+                  lb/publish (fn [& args] (swap! published conj
+                                                 (last args)))]
       (add-book nil "mindbat" nil nil
                 "The Bone Clocks" "Davis" "to-read"))
     (is (= 0 (count @added)))
