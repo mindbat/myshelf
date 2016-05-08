@@ -13,10 +13,10 @@
             [myshelf.books :refer [find-book-by-title-and-author]]
             [myshelf.db :as db]
             [myshelf.friends :refer [get-user-friends]]
+            [myshelf.models.user :as user]
             [myshelf.rank :refer [rank-books]]
             [myshelf.shelves :refer [add-book-to-shelf
-                                     get-all-books-on-shelf]])
-  (:gen-class))
+                                     get-all-books-on-shelf]]))
 
 (def default-exchange "")
 (def connection-params (if-let [uri (System/getenv "CLOUDAMQP_URL")]
@@ -28,39 +28,46 @@
                           :vhost "/"}))
 (def worker-queue "myshelf.worker")
 (def reply-queue "myshelf.reply")
-(def goodreads-creds (atom {}))
 (def goodreads-key (System/getenv "GOODREADS_KEY"))
 (def goodreads-secret (System/getenv "GOODREADS_SECRET"))
 (def goodreads-token (System/getenv "GOODREADS_TOKEN"))
 (def goodreads-token-secret (System/getenv "GOODREADS_TOKEN_SECRET"))
 
 (defn add-access-token
-  [user-handle {:keys [consumer request-token] :as creds}]
+  [user-handle goodreads-creds]
   (try
-    (if-let [user (db/find-by-handle user-handle)]
-      (let [access-token {:oauth_token (:access_token user)
-                          :oauth_token_secret (:access_token_secret user)}
-            new-creds (merge creds {:user-id (:user-id user)
-                                    :access-token access-token})]
-        (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
-      (let [access-token (get-access-token consumer
-                                           request-token)
-            user-id (get-user-id consumer access-token)
-            new-creds (merge creds {:user-id user-id
-                                    :access-token access-token})]
-        (db/insert-user user-id user-handle access-token)
-        (swap! goodreads-creds merge {(keyword user-handle) new-creds})))
+    (let [{:keys [goodreads_id oauth_token oauth_token_secret]}
+          (user/find-by-handle user-handle)]
+      (if (and goodreads_id oauth_token oauth_token_secret)
+        (let [old-creds ((keyword user-handle) @goodreads-creds)
+              access-token {:oauth_token oauth_token
+                            :oauth_token_secret oauth_token_secret}
+              new-creds (merge old-creds {:user-id goodreads_id
+                                          :access-token access-token})]
+          (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
+        (let [{:keys [consumer request-token] :as old-creds}
+              ((keyword user-handle) @goodreads-creds)
+              access-token (get-access-token consumer
+                                             request-token)
+              user-id (get-user-id consumer access-token)
+              new-creds (merge old-creds {:user-id user-id
+                                          :access-token access-token})]
+          (user/update-oauth user-handle
+                             user-id
+                             (:oauth_token access-token)
+                             (:oauth_token_secret access-token))
+          (swap! goodreads-creds merge {(keyword user-handle) new-creds}))))
     (catch Exception ex
       false)))
 
 (defn goodreads-access-for-user?
-  [user-handle]
+  [goodreads-creds user-handle]
   (let [creds ((keyword user-handle) @goodreads-creds)]
     (or (:access-token creds)
-        (add-access-token user-handle creds))))
+        (add-access-token user-handle goodreads-creds))))
 
 (defn request-goodreads-access
-  [channel user-handle]
+  [channel goodreads-creds user-handle]
   (let [creds ((keyword user-handle) @goodreads-creds)
         consumer (or (:consumer creds)
                      (get-consumer goodreads-key goodreads-secret))
@@ -110,25 +117,27 @@
                   :results results}))))
 
 (defn process-command
-  [channel user-handle cmd [arg-1 arg-2]]
-  (let [handle (keyword user-handle)
-        {:keys [consumer access-token user-id]} (handle @goodreads-creds)]
+  [channel goodreads-creds user-handle cmd [arg-1 arg-2]]
+  (let [user (user/find-by-handle user-handle)
+        consumer (get-consumer goodreads-key goodreads-secret)
+        access-token (select-keys user
+                                  [:oauth_token :oauth_token_secret])]
     (cond
       (= "rank" cmd) (rank-to-read-books channel user-handle
                                          consumer access-token
-                                         user-id)
+                                         (:goodreads_id user))
       (= "add" cmd) (add-book channel user-handle
                               consumer access-token
                               arg-1 arg-2 "to-read"))))
 
 (defn handle-message
-  [channel metadata body]
+  [goodreads-creds channel metadata body]
   (let [{:keys [user-handle cmd args]} (json/parse-string
                                         (String. body "UTF-8")
                                         true)]
-    (if (goodreads-access-for-user? user-handle)
-      (process-command channel user-handle cmd args)
-      (request-goodreads-access channel user-handle))))
+    (if (goodreads-access-for-user? goodreads-creds user-handle)
+      (process-command channel goodreads-creds user-handle cmd args)
+      (request-goodreads-access channel goodreads-creds user-handle))))
 
 (defn declare-reply-queue
   [channel]
@@ -143,9 +152,3 @@
         second
         (String. "UTF-8")
         (json/parse-string true))))
-
-(defn -main [& args]
-  (let [conn (lc/connect connection-params)
-        channel (lch/open conn)]
-    (lq/declare channel worker-queue {:auto-delete false})
-    (lcs/subscribe channel worker-queue handle-message {:auto-ack true})))

@@ -6,9 +6,10 @@
             [langohr.core :as lc]
             [langohr.consumers :as lcs]
             [langohr.queue :as lq]
-            [myshelf.db :as db]
-            [myshelf.worker :refer [default-exchange
-                                    connection-params
+            [myshelf.models.user :as user]
+            [myshelf.worker :refer [connection-params
+                                    default-exchange
+                                    handle-message
                                     reply-queue
                                     worker-queue]]
             [twitter.oauth :as auth]
@@ -115,10 +116,10 @@
 (defn listen-for-tweets
   [channel creds screen-name check-interval]
   (loop [ch channel
-         current-id (:last_tweet (db/find-last-tweet screen-name))]
+         current-id (:last_tweet (user/find-by-handle screen-name))]
     (let [last-id (check-tweets ch creds screen-name current-id)
           next-id (or last-id current-id)]
-      (db/update-last-tweet screen-name next-id)
+      (user/update-last-tweet screen-name next-id)
       (Thread/sleep check-interval)
       (recur ch next-id))))
 
@@ -127,8 +128,13 @@
         channel (lch/open conn)
         screen-name "mindbat"
         creds (get-creds)
-        check-interval (* 60 1000) #_"one minute"]
+        check-interval (* 60 1000) #_"one minute"
+        goodreads-creds (atom {})]
+    (lq/declare channel worker-queue {:auto-delete false})
     (lq/declare channel reply-queue {:auto-delete false})
+    (lcs/subscribe channel worker-queue (partial handle-message
+                                                 goodreads-creds)
+                   {:auto-ack true})
     (lcs/subscribe channel reply-queue (partial handle-reply creds)
                    {:auto-ack true})
     (listen-for-tweets channel creds screen-name check-interval)))
