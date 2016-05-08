@@ -23,7 +23,7 @@
         handle-key (keyword handle)]
     (user/create-user :handle handle :last-tweet 256)
     ;; add-access-token should return false
-    (is (not (add-access-token handle {})))
+    (is (not (add-access-token handle (atom {}))))
     ;; user in db should not have oauth
     (let [db-user (user/find-by-handle handle)]
       (is (nil? (:oauth_token db-user)))
@@ -35,7 +35,7 @@
       (with-redefs [get-access-token (fn [& args] access-token)
                     get-user-id (fn [& args] user-id)]
         ;; add-access-token should return updated creds
-        (let [ret (add-access-token handle {})]
+        (let [ret (add-access-token handle (atom {}))]
           (is ret)
           (is (= access-token (:access-token (handle-key ret))))
           (is (= user-id (:user-id (handle-key ret))))))
@@ -47,7 +47,7 @@
                (:oauth_token_secret db-user))))
       ;; no mocking out
       ;; add-access-token should return db creds
-      (let [ret (add-access-token handle {})]
+      (let [ret (add-access-token handle (atom {}))]
         (is ret)
         (is (= access-token (:access-token (handle-key ret))))
         (is (= user-id (:user-id (handle-key ret))))))))
@@ -56,8 +56,9 @@
   ;; arbitrary handles should be false
   (let [user-handle "prefect"
         user-access-token {:oauth_token "pinfeathers"
-                           :oauth_token_secret "gollyfluff"}]
-    (is (not (goodreads-access-for-user? user-handle)))
+                           :oauth_token_secret "gollyfluff"}
+        goodreads-creds (atom {})]
+    (is (not (goodreads-access-for-user? goodreads-creds user-handle)))
     ;; insert user into db
     (user/create-user :goodreads-id "42"
                       :handle user-handle
@@ -65,41 +66,41 @@
                       :oauth-token-secret (:oauth_token_secret
                                            user-access-token))
     ;; should now return true
-    (is (goodreads-access-for-user? user-handle))
+    (is (goodreads-access-for-user? goodreads-creds user-handle))
     ;; creds should include handle and info
     (let [creds (:prefect @goodreads-creds)]
       (is (= "42"
              (:user-id creds)))
       (is (= user-access-token
-             (:access-token creds)))))
-  ;; another arbitrary handle should be false
-  (let [user-handle "ford"
-        user-access-token {:oauth_token "pinfeathers"
-                           :oauth_token_secret "gollyfluff"}]
-    (is (not (goodreads-access-for-user? user-handle)))
-    ;; mock out access token and user id
-    (with-redefs [get-access-token (fn [& args] user-access-token)
-                  get-user-id (fn [& args] "7")]
-      ;; call again; should be true now
-      (is (goodreads-access-for-user? user-handle)))
-    ;; should have updated db
-    (let [user (user/find-by-goodreads-id "7")]
-      (is (= "ford"
-             (:handle user)))
-      (is (= "pinfeathers"
-             (:oauth_token user)))
-      (is (= "gollyfluff"
-             (:oauth_token_secret user))))
-    ;; should have updated creds atom
-    (let [creds (:ford @goodreads-creds)]
-      (is (= "7"
-             (:user-id creds)))
-      (is (= user-access-token
-             (:access-token creds)))))
-  ;; if user exists but has no auth, should return false
-  (let [handle "archimedes"]
-    (user/create-user :handle handle :last-tweet 24)
-    (is (not (goodreads-access-for-user? handle)))))
+             (:access-token creds))))
+    ;; another arbitrary handle should be false
+    (let [user-handle "ford"
+          user-access-token {:oauth_token "pinfeathers"
+                             :oauth_token_secret "gollyfluff"}]
+      (is (not (goodreads-access-for-user? goodreads-creds user-handle)))
+      ;; mock out access token and user id
+      (with-redefs [get-access-token (fn [& args] user-access-token)
+                    get-user-id (fn [& args] "7")]
+        ;; call again; should be true now
+        (is (goodreads-access-for-user? goodreads-creds user-handle)))
+      ;; should have updated db
+      (let [user (user/find-by-goodreads-id "7")]
+        (is (= "ford"
+               (:handle user)))
+        (is (= "pinfeathers"
+               (:oauth_token user)))
+        (is (= "gollyfluff"
+               (:oauth_token_secret user))))
+      ;; should have updated creds atom
+      (let [creds (:ford @goodreads-creds)]
+        (is (= "7"
+               (:user-id creds)))
+        (is (= user-access-token
+               (:access-token creds)))))
+    ;; if user exists but has no auth, should return false
+    (let [handle "archimedes"]
+      (user/create-user :handle handle :last-tweet 24)
+      (is (not (goodreads-access-for-user? goodreads-creds handle))))))
 
 (deftest t-add-book
   (let [found-books [{:id "12"

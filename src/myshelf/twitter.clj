@@ -7,8 +7,8 @@
             [langohr.consumers :as lcs]
             [langohr.queue :as lq]
             [myshelf.models.user :as user]
-            [myshelf.worker :refer [default-exchange
-                                    connection-params
+            [myshelf.worker :refer [connection-params
+                                    default-exchange
                                     handle-message
                                     reply-queue
                                     worker-queue]]
@@ -128,10 +128,13 @@
         channel (lch/open conn)
         screen-name "mindbat"
         creds (get-creds)
-        check-interval (* 60 1000) #_"one minute"]
+        check-interval (* 60 1000) #_"one minute"
+        goodreads-creds (atom {})]
     (lq/declare channel worker-queue {:auto-delete false})
     (lq/declare channel reply-queue {:auto-delete false})
-    (lcs/subscribe channel worker-queue handle-message {:auto-ack true})
+    (lcs/subscribe channel worker-queue (partial handle-message
+                                                 goodreads-creds)
+                   {:auto-ack true})
     (lcs/subscribe channel reply-queue (partial handle-reply creds)
                    {:auto-ack true})
     (listen-for-tweets channel creds screen-name check-interval)))

@@ -29,28 +29,30 @@
                           :vhost "/"}))
 (def worker-queue "myshelf.worker")
 (def reply-queue "myshelf.reply")
-(def goodreads-creds (atom {}))
 (def goodreads-key (System/getenv "GOODREADS_KEY"))
 (def goodreads-secret (System/getenv "GOODREADS_SECRET"))
 (def goodreads-token (System/getenv "GOODREADS_TOKEN"))
 (def goodreads-token-secret (System/getenv "GOODREADS_TOKEN_SECRET"))
 
 (defn add-access-token
-  [user-handle {:keys [consumer request-token] :as creds}]
+  [user-handle goodreads-creds]
   (try
     (let [{:keys [goodreads_id oauth_token oauth_token_secret]}
           (user/find-by-handle user-handle)]
       (if (and goodreads_id oauth_token oauth_token_secret)
-        (let [access-token {:oauth_token oauth_token
+        (let [old-creds ((keyword user-handle) @goodreads-creds)
+              access-token {:oauth_token oauth_token
                             :oauth_token_secret oauth_token_secret}
-              new-creds (merge creds {:user-id goodreads_id
-                                      :access-token access-token})]
+              new-creds (merge old-creds {:user-id goodreads_id
+                                          :access-token access-token})]
           (swap! goodreads-creds merge {(keyword user-handle) new-creds}))
-        (let [access-token (get-access-token consumer
+        (let [{:keys [consumer request-token] :as old-creds}
+              ((keyword user-handle) @goodreads-creds)
+              access-token (get-access-token consumer
                                              request-token)
               user-id (get-user-id consumer access-token)
-              new-creds (merge creds {:user-id user-id
-                                      :access-token access-token})]
+              new-creds (merge old-creds {:user-id user-id
+                                          :access-token access-token})]
           (user/update-oauth user-handle
                              user-id
                              (:oauth_token access-token)
@@ -60,13 +62,13 @@
       false)))
 
 (defn goodreads-access-for-user?
-  [user-handle]
+  [goodreads-creds user-handle]
   (let [creds ((keyword user-handle) @goodreads-creds)]
     (or (:access-token creds)
-        (add-access-token user-handle creds))))
+        (add-access-token user-handle goodreads-creds))))
 
 (defn request-goodreads-access
-  [channel user-handle]
+  [channel goodreads-creds user-handle]
   (let [creds ((keyword user-handle) @goodreads-creds)
         consumer (or (:consumer creds)
                      (get-consumer goodreads-key goodreads-secret))
@@ -116,25 +118,27 @@
                   :results results}))))
 
 (defn process-command
-  [channel user-handle cmd [arg-1 arg-2]]
-  (let [handle (keyword user-handle)
-        {:keys [consumer access-token user-id]} (handle @goodreads-creds)]
+  [channel goodreads-creds user-handle cmd [arg-1 arg-2]]
+  (let [user (user/find-by-handle user-handle)
+        consumer (get-consumer goodreads-key goodreads-secret)
+        access-token (select-keys user
+                                  [:oauth_token :oauth_token_secret])]
     (cond
       (= "rank" cmd) (rank-to-read-books channel user-handle
                                          consumer access-token
-                                         user-id)
+                                         (:goodreads_id user))
       (= "add" cmd) (add-book channel user-handle
                               consumer access-token
                               arg-1 arg-2 "to-read"))))
 
 (defn handle-message
-  [channel metadata body]
+  [goodreads-creds channel metadata body]
   (let [{:keys [user-handle cmd args]} (json/parse-string
                                         (String. body "UTF-8")
                                         true)]
-    (if (goodreads-access-for-user? user-handle)
-      (process-command channel user-handle cmd args)
-      (request-goodreads-access channel user-handle))))
+    (if (goodreads-access-for-user? goodreads-creds user-handle)
+      (process-command channel goodreads-creds user-handle cmd args)
+      (request-goodreads-access channel goodreads-creds user-handle))))
 
 (defn declare-reply-queue
   [channel]
