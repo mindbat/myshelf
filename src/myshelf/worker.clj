@@ -16,8 +16,7 @@
             [myshelf.models.user :as user]
             [myshelf.rank :refer [rank-books]]
             [myshelf.shelves :refer [add-book-to-shelf
-                                     get-all-books-on-shelf]])
-  (:gen-class))
+                                     get-all-books-on-shelf]]))
 
 (def default-exchange "")
 (def connection-params (if-let [uri (System/getenv "CLOUDAMQP_URL")]
@@ -153,9 +152,3 @@
         second
         (String. "UTF-8")
         (json/parse-string true))))
-
-(defn -main [& args]
-  (let [conn (lc/connect connection-params)
-        channel (lch/open conn)]
-    (lq/declare channel worker-queue {:auto-delete false})
-    (lcs/subscribe channel worker-queue handle-message {:auto-ack true})))
