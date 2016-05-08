@@ -2,7 +2,9 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer :all]
             [langohr.basic :as lb]
-            [myshelf.auth :refer [get-access-token
+            [myshelf.auth :refer [find-approval-uri
+                                  get-access-token
+                                  get-request-token
                                   get-user-id]]
             [myshelf.books :refer [find-book-by-title-and-author]]
             [myshelf.db :as db]
@@ -147,3 +149,47 @@
             :sent-args ["Davis" "The Bone Clocks" "to-read"]
             :results nil}
            (json/parse-string (first @published) true)))))
+
+(deftest t-handle-message-creds
+  (let [handle "merlin"
+        command (.getBytes
+                 (json/generate-string {:user-handle handle
+                                        :cmd "add"
+                                        :args ["Bone Clocks"
+                                               "Mitchell"]}))
+        creds (atom {})
+        published (atom [])
+        request-token {:oauth_token "request"
+                       :oauth_token_secret "request-secret"}
+        access-token {:oauth_token "access"
+                      :oauth_token_secret "access-secret"}]
+    (with-redefs [lb/publish (fn [& args]
+                               (swap! published conj (last args)))
+                  get-request-token (constantly request-token)
+                  find-approval-uri (constantly "http://nowhere.com")]
+      ;; call handle message with empty creds
+      (handle-message creds nil {} command)
+      ;; should have requested access
+      (is (= 1 (count @published)))
+      (is (= {:user-handle handle
+              :msg "Please hit the following url in your browser"
+              :url "http://nowhere.com"}
+             (json/parse-string (first @published) true)))
+      ;; creds should have consumer and request token
+      (is (count @creds))
+      (is ((keyword handle) @creds))
+      (is (= request-token
+             (:request-token ((keyword handle) @creds))))
+      (with-redefs [get-access-token (constantly access-token)
+                    get-user-id (constantly "1337")
+                    find-book-by-title-and-author (constantly [true])
+                    add-book-to-shelf (constantly "added")]
+        ;; call handle message with access-token available
+        (handle-message creds nil {} command)
+        ;; should process the command
+        (is (= 2 (count @published)))
+        (is (= {:user-handle handle
+                :sent-cmd "add-book"
+                :sent-args ["Mitchell" "Bone Clocks" "to-read"]
+                :results "added"}
+               (json/parse-string (last @published) true)))))))
