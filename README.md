@@ -44,24 +44,24 @@ Myshelf accepts two commands: add and rank.
 
 To issue the add command, send a tweet that looks like:
 
-   myshelf-bot: add <book-title> by <book-author>
+     myshelf-bot: add <book-title> by <book-author>
 
 This will trigger the bot to look up the book in Goodreads by the title and author you've given it, and then add that book to your to-read shelf.
 
 If successful, the bot will reply with a tweet that looks like:
 
-   @<your-twitter-handle>: Added <book-author> to to-read
+     @<your-twitter-handle>: Added <book-author> to to-read
 
 To issue the rank command, send a tweet that looks like:
 
-   myshelf-bot: rank <shelf-name>
+     myshelf-bot: rank <shelf-name>
 
 This will trigger the bot to pull down all the books you have on the given shelf, and then rank them in order of which ones you should read first. It'll then tweet back with the titles of the top four:
 
      @<your-twitter-handle>: <title-1>
-			     <title-2>
-			     <title-3>
-			     <title-4>
+  			       <title-2>
+			       <title-3>
+			       <title-4>
 
 ### Approving the Bot
 
