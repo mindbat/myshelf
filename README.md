@@ -60,8 +60,8 @@ This will trigger the bot to pull down all the books you have on the given shelf
 
      @<your-twitter-handle>: <title-1>
                              <title-2>
-			     <title-3>
-			     <title-4>
+			             <title-3>
+			             <title-4>
 
 ### Approving the Bot
 
