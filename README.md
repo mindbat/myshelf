@@ -59,9 +59,9 @@ To issue the rank command, send a tweet that looks like:
 This will trigger the bot to pull down all the books you have on the given shelf, and then rank them in order of which ones you should read first. It'll then tweet back with the titles of the top four:
 
      @<your-twitter-handle>: <title-1>
-  		             	       <title-2>
-			               <title-3>
-			               <title-4>
+                             <title-2>
+			     <title-3>
+			     <title-4>
 
 ### Approving the Bot
 
